@@ -3,6 +3,8 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import '../styles/mapPicker.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 // KKTC sınırları
 const KKTC_BOUNDS: L.LatLngBoundsExpression = [
   [34.9, 32.4], // güneybatı
@@ -37,7 +39,7 @@ export const KKTCMapPicker = ({ onLocationSelect, initialLat, initialLng }: KKTC
     try {
       // Backend üzerinden reverse geocoding yap (CORS ve rate limit sorununu çözer)
       const response = await fetch(
-        `http://localhost:5001/api/location/reverse-geocode?lat=${lat}&lng=${lng}`
+        `${API_BASE_URL}/location/reverse-geocode?lat=${lat}&lng=${lng}`
       );
       
       if (!response.ok) {
