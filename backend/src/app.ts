@@ -45,6 +45,13 @@ export const createApp = (): Application => {
   app.use('/api/marketplace', marketplaceRoutes);
   app.use('/api/customer', customerRoutes);
 
+  app.get('/', (_req, res) => {
+    res.json({
+      message: 'Kurye Sistemi Backend API is running',
+      health: '/api/health'
+    });
+  });
+
   app.get('/api/health', (_req, res) => {
     res.json({ status: 'OK', timestamp: new Date().toISOString() });
   });
