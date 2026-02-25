@@ -1,0 +1,29 @@
+/* Form fade-in animation */
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.map-form-container {
+  animation: fadeInScale 0.3s ease-out;
+}
+
+/* Map container smooth appearance */
+@keyframes mapFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.map-container {
+  animation: mapFadeIn 0.4s ease-out;
+}

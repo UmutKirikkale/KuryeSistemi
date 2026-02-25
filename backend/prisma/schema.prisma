@@ -1,0 +1,332 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  RESTAURANT
+  COURIER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING       // Sipariş bekliyor
+  ASSIGNED      // Kuryeye atandı
+  PICKED_UP     // Kuryede
+  DELIVERED     // Teslim edildi
+  CANCELLED     // İptal edildi
+  APPROVED      // Restoran onayladı
+  PREPARING     // Restoran hazırlıyor
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // İlişkiler
+  savedAddresses SavedAddress[]
+  orders         CustomerOrder[]
+  restaurantRatings RestaurantRating[]
+
+  @@map("customers")
+}
+
+model SavedAddress {
+  id        String   @id @default(uuid())
+  label     String   // "Ev", "İş", vb.
+  address   String   // Tam adres (KKTC)
+  latitude  Float
+  longitude Float
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // İlişkiler
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId])
+  @@map("saved_addresses")
+}
+
+model CustomerOrder {
+  id               String      @id @default(uuid())
+  orderNumber      String      @unique
+  status           OrderStatus @default(PENDING)
+  pickupAddress    String
+  deliveryAddress  String
+  pickupLatitude   Float
+  pickupLongitude  Float
+  deliveryLatitude Float
+  deliveryLongitude Float
+  
+  orderAmount      Float
+  courierFee       Float
+  commissionAmount Float @default(0.0)
+  
+  paymentMethod    PaymentMethod?
+  notes            String?
+  cancelReason     String?
+  
+  assignedAt       DateTime?
+  pickedUpAt       DateTime?
+  deliveredAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // İlişkiler
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  courierId String?
+  courier   User?   @relation("CourierCustomerOrders", fields: [courierId], references: [id])
+
+  rating RestaurantRating?
+
+  @@index([customerId, createdAt])
+  @@map("customer_orders")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  role      UserRole @default(COURIER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // İlişkiler
+  restaurants    Restaurant[]
+  courierProfile CourierProfile?
+  orders         Order[]        @relation("CourierOrders")
+  courierCustomerOrders CustomerOrder[] @relation("CourierCustomerOrders")
+
+  @@map("users")
+}
+
+model Restaurant {
+  id                  String   @id @default(uuid())
+  name                String
+  address             String
+  phone               String
+  commissionPerOrder  Float    @default(0.0) // Sipariş başına komisyon (TL)
+  latitude            Float?   // Restoran konumu
+  longitude           Float?   // Restoran konumu
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  // İlişkiler
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orders               Order[]
+  customerOrders       CustomerOrder[]
+  ratings              RestaurantRating[]
+  financialTransactions FinancialTransaction[]
+  menuCategories       MenuCategory[]
+  menuItems            MenuItem[]
+
+  @@map("restaurants")
+}
+
+model MenuCategory {
+  id          String   @id @default(uuid())
+  name        String
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  menuItems MenuItem[]
+
+  @@index([restaurantId, sortOrder])
+  @@map("menu_categories")
+}
+
+model MenuItem {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Float
+  imageUrl    String?
+  isAvailable Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  categoryId String?
+  category   MenuCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([restaurantId, isAvailable])
+  @@index([categoryId, sortOrder])
+  @@map("menu_items")
+}
+
+model CourierProfile {
+  id                String   @id @default(uuid())
+  vehicleType       String? // Araç tipi: Bisiklet, Motosiklet, Araba
+  isAvailable       Boolean  @default(true)
+  currentLatitude   Float?
+  currentLongitude  Float?
+  lastLocationUpdate DateTime?
+  paymentPerOrder   Float    @default(0.0) // Sipariş başına kurye ödemesi (Admin belirler)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  // İlişkiler
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  locationHistory LocationHistory[]
+  availabilityEvents CourierAvailabilityEvent[]
+
+  @@map("courier_profiles")
+}
+
+model CourierAvailabilityEvent {
+  id        String   @id @default(uuid())
+  isAvailable Boolean
+  createdAt DateTime @default(now())
+
+  // İlişkiler
+  courierId String
+  courier   CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  @@index([courierId, createdAt])
+  @@map("courier_availability_events")
+}
+
+model SystemSettings {
+  id                        Int      @id @default(autoincrement())
+  courierAutoBusyAfterOrders Int      @default(4)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  orderNumber      String      @unique
+  status           OrderStatus @default(PENDING)
+  pickupAddress    String
+  deliveryAddress  String
+  pickupLatitude   Float
+  pickupLongitude  Float
+  deliveryLatitude Float
+  deliveryLongitude Float
+  
+  // Finansal bilgiler
+  orderAmount      Float // Sipariş tutarı (brüt kazanç)
+  courierFee       Float // Kurye ücreti
+  commissionAmount Float @default(0.0) // Komisyon tutarı
+  
+  customerName     String
+  customerPhone    String
+  paymentMethod    PaymentMethod?
+  notes            String?
+  cancelReason     String?
+  
+  assignedAt       DateTime?
+  pickedUpAt       DateTime?
+  deliveredAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  // İlişkiler
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  courierId String?
+  courier   User?   @relation("CourierOrders", fields: [courierId], references: [id])
+
+  financialTransactions FinancialTransaction[]
+
+  @@map("orders")
+}
+
+model LocationHistory {
+  id        String   @id @default(uuid())
+  latitude  Float
+  longitude Float
+  accuracy  Float?
+  timestamp DateTime @default(now())
+
+  // İlişkiler
+  courierId String
+  courier   CourierProfile @relation(fields: [courierId], references: [id], onDelete: Cascade)
+
+  @@index([courierId, timestamp])
+  @@map("location_history")
+}
+
+model FinancialTransaction {
+  id              String   @id @default(uuid())
+  transactionType String // EARNING, COURIER_FEE, COMMISSION
+  amount          Float
+  description     String?
+  date            DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  // İlişkiler
+  restaurantId String?
+  restaurant   Restaurant? @relation(fields: [restaurantId], references: [id])
+
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  @@index([restaurantId, date])
+  @@map("financial_transactions")
+}
+
+model RestaurantRating {
+  id              String   @id @default(uuid())
+  speedScore      Int
+  tasteScore      Int
+  priceScore      Int
+  createdAt       DateTime @default(now())
+
+  customerOrderId String   @unique
+  customerOrder   CustomerOrder @relation(fields: [customerOrderId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  restaurantId String
+  restaurant   Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@index([restaurantId, createdAt])
+  @@index([customerId, createdAt])
+  @@map("restaurant_ratings")
+}

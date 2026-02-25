@@ -1,0 +1,365 @@
+import { useEffect, useState } from 'react';
+import { useAuthStore } from '../store/authStore';
+import { useOrderStore } from '../store/orderStore';
+import { useLocationStore } from '../store/locationStore';
+import { wsService } from '../services/websocket';
+import { restaurantService } from '../services/restaurantService';
+import { financialService } from '../services/financialService';
+import {
+  LogOut,
+  Package,
+  DollarSign,
+  TrendingUp,
+  MapPin,
+  Plus,
+  Settings,
+  X
+} from 'lucide-react';
+import MapComponent from '../components/MapComponent';
+import LocationPickerMap from '../components/LocationPickerMap';
+import CreateOrderModal from '../components/CreateOrderModal';
+import OrderList from '../components/OrderList';
+import FinancialSummary from '../components/FinancialSummary';
+
+export default function RestaurantDashboard() {
+  const { user, logout } = useAuthStore();
+  const { orders, fetchOrders } = useOrderStore();
+  const { courierLocations, setCourierLocations, updateCourierLocation } = useLocationStore();
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [restaurantLocation, setRestaurantLocation] = useState<[number, number]>([41.0082, 28.9784]);
+  const [tempLocation, setTempLocation] = useState<[number, number]>([41.0082, 28.9784]);
+  const [financialData, setFinancialData] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState<'orders' | 'map' | 'financial'>('orders');
+  const [savingLocation, setSavingLocation] = useState(false);
+
+  useEffect(() => {
+    // Siparişleri yükle
+    fetchOrders();
+
+    // Restoran profilini ve kurye konumlarını yükle
+    loadRestaurantProfile();
+    loadCourierLocations();
+
+    // Finansal verileri yükle
+    loadFinancialData();
+
+    // WebSocket dinleyicilerini kur
+    wsService.onLocationUpdate((data) => {
+      updateCourierLocation({
+        courierId: data.courierId,
+        courierName: '',
+        latitude: data.latitude,
+        longitude: data.longitude
+      });
+    });
+
+    wsService.onOrderStatusUpdate(() => {
+      // Siparişleri yeniden yükle
+      fetchOrders();
+    });
+
+    wsService.onNewOrder(() => {
+      // Yeni sipariş bildirimi (genellikle kurye için)
+    });
+
+    return () => {
+      // Cleanup
+    };
+  }, []);
+
+  const loadRestaurantProfile = async () => {
+    try {
+      const response = await restaurantService.getProfile();
+      if (response.restaurant.latitude && response.restaurant.longitude) {
+        const location: [number, number] = [response.restaurant.latitude, response.restaurant.longitude];
+        setRestaurantLocation(location);
+        setTempLocation(location);
+      }
+    } catch (error) {
+      console.error('Failed to load restaurant profile:', error);
+    }
+  };
+
+  const loadCourierLocations = async () {
+    try {
+      const response = await restaurantService.getCourierLocations();
+      setCourierLocations(response.courierLocations);
+    } catch (error) {
+      console.error('Failed to load courier locations:', error);
+    }
+  };
+
+  const loadFinancialData = async () => {
+    try {
+      const response = await financialService.getRestaurantFinancials();
+      setFinancialData(response);
+    } catch (error) {
+      console.error('Failed to load financial data:', error);
+    }
+  };
+
+  const handleSaveLocation = async () => {
+    setSavingLocation(true);
+    try {
+      await restaurantService.updateLocation(tempLocation[0], tempLocation[1]);
+      setRestaurantLocation(tempLocation);
+      setShowLocationModal(false);
+      alert('✅ Restoran konumu başarıyla güncellendi!');
+    } catch (error) {
+      console.error('Failed to save location:', error);
+      alert('❌ Konum kaydedilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setSavingLocation(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm border-b">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                {user?.restaurant?.name || 'Restoran Paneli'}
+              </h1>
+              <p className="text-sm text-gray-600">Hoş geldiniz, {user?.name}</p>
+            </div>
+            <button onClick={handleLogout} className="btn btn-secondary flex items-center gap-2">
+              <LogOut className="w-4 h-4" />
+              Çıkış
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Toplam Sipariş</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {orders.length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                <Package className="w-6 h-6 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Brüt Gelir</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {financialData?.summary.totalEarnings.toFixed(2) || '0.00'} ₺
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Kurye Ücreti</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {financialData?.summary.totalCourierFees.toFixed(2) || '0.00'} ₺
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                <TrendingUp className="w-6 h-6 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Net Bakiye</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {financialData?.summary.netBalance.toFixed(2) || '0.00'} ₺
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                <DollarSign className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="bg-white rounded-lg shadow-sm mb-6">
+          <div className="border-b">
+            <div className="flex gap-4 px-6">
+              <button
+                onClick={() => setActiveTab('orders')}
+                className={`py-4 px-4 font-medium border-b-2 transition-colors ${
+                  activeTab === 'orders'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Siparişler
+              </button>
+              <button
+                onClick={() => setActiveTab('map')}
+                className={`py-4 px-4 font-medium border-b-2 transition-colors ${
+                  activeTab === 'map'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <MapPin className="w-4 h-4 inline mr-2" />
+                Harita
+              </button>
+              <button
+                onClick={() => setActiveTab('financial')}
+                className={`py-4 px-4 font-medium border-b-2 transition-colors ${
+                  activeTab === 'financial'
+                    ? 'border-primary-600 text-primary-600'
+                    : 'border-transparent text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Finansal Rapor
+              </button>
+            </div>
+          </div>
+
+          <div className="p-6">
+            {activeTab === 'orders' && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-semibold">Siparişler</h2>
+                  <button
+                    onClick={() => setShowCreateModal(true)}
+                    className="btn btn-primary flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Yeni Sipariş
+                  </button>
+                </div>
+                <OrderList orders={orders} role="RESTAURANT" />
+              </div>
+            )}
+
+            {activeTab === 'map' && (
+              <div>
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-semibold">Canlı Kurye Takibi</h2>
+                  <button
+                    onClick={() => setShowLocationModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Konum Ayarla
+                  </button>
+                </div>
+
+                {courierLocations.length === 0 ? (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-4">
+                    <p className="text-yellow-800 text-center">
+                      📍 Şu anda aktif teslimat yapan kurye bulunmuyor
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <p className="text-sm text-blue-800">
+                      🚴 <strong>{courierLocations.length}</strong> kurye aktif teslimat yapıyor
+                    </p>
+                  </div>
+                )}
+
+                <div className="h-[600px] rounded-lg overflow-hidden">
+                  <MapComponent 
+                    courierLocations={courierLocations}
+                    center={restaurantLocation}
+                  />
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'financial' && (
+              <div>
+                <h2 className="text-xl font-semibold mb-6">Finansal Rapor</h2>
+                <FinancialSummary data={financialData} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {showCreateModal && (
+        <CreateOrderModal
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={() => {
+            setShowCreateModal(false);
+            fetchOrders();
+            loadFinancialData();
+          }}
+        />
+      )}
+
+      {/* Location Settings Modal */}
+      {showLocationModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <MapPin className="w-6 h-6 text-indigo-600" />
+                <h3 className="text-xl font-bold text-gray-900">Restoran Konumu Ayarla</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowLocationModal(false);
+                  setTempLocation(restaurantLocation);
+                }}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Kapat"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-6">
+              <LocationPickerMap
+                initialPosition={restaurantLocation}
+                onLocationSelect={(lat, lng) => setTempLocation([lat, lng])}
+                height="500px"
+              />
+            </div>
+
+            <div className="border-t border-gray-200 px-6 py-4 bg-gray-50 flex space-x-3">
+              <button
+                onClick={() => {
+                  setShowLocationModal(false);
+                  setTempLocation(restaurantLocation);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleSaveLocation}
+                disabled={savingLocation}
+                className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingLocation ? 'Kaydediliyor...' : 'Konumu Kaydet'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,33 @@
+/* Map container styling */
+.map-picker-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.map-picker-wrapper {
+  width: 100%;
+  height: 400px;
+  min-height: 400px;
+  position: relative;
+  z-index: 0;
+  border-radius: 0.5rem;
+  border: 1px solid #d1d5db;
+}
+
+.map-address-display {
+  background-color: #eff6ff;
+  border: 1px solid #93c5fd;
+  border-radius: 0.5rem;
+  padding: 1rem;
+}
+
+.map-address-display p {
+  font-size: 0.875rem;
+  color: #1e40af;
+}
+
+.map-help-text {
+  font-size: 0.75rem;
+  color: #4b5563;
+}

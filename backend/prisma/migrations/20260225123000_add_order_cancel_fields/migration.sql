@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "orders"
+ADD COLUMN IF NOT EXISTS "cancelReason" TEXT,
+ADD COLUMN IF NOT EXISTS "cancelledAt" TIMESTAMP(3);
