@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import bcrypt from 'bcryptjs';
-import jwt, { SignOptions } from 'jsonwebtoken';
+import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
@@ -85,7 +85,7 @@ export const register = async (req: AuthRequest, res: Response): Promise<any> =>
     });
 
     // JWT token oluştur
-    const jwtOptions: SignOptions = { expiresIn: '7d' };
+    const jwtOptions = { expiresIn: '7d' };
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'secret',
@@ -142,7 +142,7 @@ export const login = async (req: AuthRequest, res: Response): Promise<any> => {
     }
 
     // JWT token oluştur
-    const jwtOptions: SignOptions = { expiresIn: '7d' };
+    const jwtOptions = { expiresIn: '7d' };
     const token = jwt.sign(
       { userId: user.id, role: user.role },
       process.env.JWT_SECRET || 'secret',
