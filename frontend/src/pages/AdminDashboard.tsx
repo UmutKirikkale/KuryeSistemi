@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useLocationStore } from '../store/locationStore';
 import { adminService } from '../services/adminService';
@@ -275,6 +275,15 @@ export default function AdminDashboard() {
   const [editIsAvailable, setEditIsAvailable] = useState<boolean>(false);
   const [editSaving, setEditSaving] = useState(false);
 
+  const loadCourierLocations = useCallback(async () => {
+    try {
+      const response = await locationService.getCourierLocations();
+      setCourierLocations(response.couriers || []);
+    } catch (error) {
+      console.error('Kurye konumlari yuklenemedi:', error);
+    }
+  }, [setCourierLocations]);
+
   useEffect(() => {
     fetchDashboardData();
     fetchSystemSettings();
@@ -297,16 +306,7 @@ export default function AdminDashboard() {
     return () => {
       window.clearInterval(refreshInterval);
     };
-  }, [updateCourierLocation]);
-
-  const loadCourierLocations = async () => {
-    try {
-      const response = await locationService.getCourierLocations();
-      setCourierLocations(response.couriers || []);
-    } catch (error) {
-      console.error('Kurye konumlari yuklenemedi:', error);
-    }
-  };
+  }, [loadCourierLocations, updateCourierLocation]);
 
   const fetchSystemSettings = async () => {
     try {
@@ -2047,6 +2047,7 @@ export default function AdminDashboard() {
               <button
                 onClick={() => setShowCourierSettlementModal(false)}
                 className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                aria-label="Kurye hesap kapama raporu penceresini kapat"
               >
                 <X className="w-6 h-6 text-gray-600" />
               </button>
@@ -2055,8 +2056,9 @@ export default function AdminDashboard() {
             <div className="p-6 overflow-auto space-y-4">
               <div className="flex flex-col md:flex-row gap-3 md:items-end">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Başlangıç</label>
+                  <label htmlFor="settlementStartDate" className="block text-xs text-gray-600 mb-1">Başlangıç</label>
                   <input
+                    id="settlementStartDate"
                     type="date"
                     className="input"
                     value={settlementStartDate}
@@ -2064,8 +2066,9 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Bitiş</label>
+                  <label htmlFor="settlementEndDate" className="block text-xs text-gray-600 mb-1">Bitiş</label>
                   <input
+                    id="settlementEndDate"
                     type="date"
                     className="input"
                     value={settlementEndDate}

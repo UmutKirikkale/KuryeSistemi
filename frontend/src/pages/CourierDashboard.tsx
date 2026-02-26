@@ -210,7 +210,9 @@ export default function CourierDashboard() {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              <label htmlFor="courierSettlementDate" className="sr-only">Hesap kapama tarihi</label>
               <input
+                id="courierSettlementDate"
                 type="date"
                 className="input"
                 value={settlementDate}
