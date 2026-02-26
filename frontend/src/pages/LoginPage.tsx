@@ -83,6 +83,13 @@ export default function LoginPage() {
               Kayıt olun
             </Link>
           </div>
+
+          <div className="mt-3 text-center text-sm text-gray-600">
+            Müşteri girişi için{' '}
+            <Link to="/customer/login" className="text-primary-600 hover:text-primary-700 font-medium">
+              buraya tıklayın
+            </Link>
+          </div>
         </div>
       </div>
     </div>

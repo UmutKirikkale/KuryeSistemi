@@ -100,6 +100,12 @@ export default function CustomerLoginPage() {
               ← Marketplace'e dön
             </a>
           </div>
+
+          <div className="text-center">
+            <a href="/login" className="text-sm text-blue-600 hover:text-blue-500">
+              Admin / Kurye / Restoran girişi
+            </a>
+          </div>
         </form>
       </div>
     </div>

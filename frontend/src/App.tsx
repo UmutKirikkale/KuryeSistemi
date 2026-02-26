@@ -11,6 +11,7 @@ import OrderTrackingPage from './pages/OrderTrackingPage';
 import CustomerLoginPage from './pages/CustomerLoginPage';
 import CustomerRegisterPage from './pages/CustomerRegisterPage';
 import CustomerProfilePage from './pages/CustomerProfilePage';
+import PanelSelectPage from './pages/PanelSelectPage';
 
 function App() {
   const { isAuthenticated, user } = useAuthStore();
@@ -46,13 +47,27 @@ function App() {
         <Route path="/customer/register" element={!isCustomerAuth ? <CustomerRegisterPage /> : <Navigate to="/market" />} />
         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
         <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
+        <Route path="/panel-select" element={<PanelSelectPage />} />
         
         <Route
           path="/dashboard"
           element={getDashboard()}
         />
         
-        <Route path="/" element={<Navigate to={isAuthenticated ? "/dashboard" : "/customer/login"} />} />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to={
+                isAuthenticated
+                  ? '/dashboard'
+                  : isCustomerAuth
+                    ? '/market'
+                    : '/panel-select'
+              }
+            />
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
