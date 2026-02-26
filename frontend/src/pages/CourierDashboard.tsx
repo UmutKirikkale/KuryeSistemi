@@ -21,6 +21,12 @@ export default function CourierDashboard() {
   const { orders, fetchOrders } = useOrderStore();
   const { setIsTracking } = useLocationStore();
   const [earnings, setEarnings] = useState<any>(null);
+  const [settlementReport, setSettlementReport] = useState<any>(null);
+  const [settlementLoading, setSettlementLoading] = useState(false);
+  const [closingSettlement, setClosingSettlement] = useState(false);
+  const [settlementDate, setSettlementDate] = useState<string>(
+    new Date().toISOString().slice(0, 10)
+  );
   const [isAvailable, setIsAvailable] = useState(
     user?.courierProfile?.isAvailable || false
   );
@@ -31,6 +37,7 @@ export default function CourierDashboard() {
 
     // Kazançları yükle
     loadEarnings();
+    loadSettlementReport(settlementDate);
 
     // WebSocket dinleyicilerini kur
     wsService.onOrderStatusUpdate(() => {
@@ -47,12 +54,42 @@ export default function CourierDashboard() {
     };
   }, []);
 
+  useEffect(() => {
+    loadSettlementReport(settlementDate);
+  }, [settlementDate]);
+
   const loadEarnings = async () => {
     try {
       const response = await financialService.getCourierEarnings();
       setEarnings(response);
     } catch (error) {
       console.error('Failed to load earnings:', error);
+    }
+  };
+
+  const loadSettlementReport = async (date: string) => {
+    try {
+      setSettlementLoading(true);
+      const response = await financialService.getCourierSettlement(date);
+      setSettlementReport(response.report);
+    } catch (error) {
+      console.error('Failed to load settlement report:', error);
+    } finally {
+      setSettlementLoading(false);
+    }
+  };
+
+  const handleCloseSettlement = async () => {
+    try {
+      setClosingSettlement(true);
+      const response = await financialService.closeCourierSettlement(settlementDate);
+      setSettlementReport(response.report);
+      alert(response.message || 'Günlük hesap kapama tamamlandı');
+    } catch (error) {
+      console.error('Failed to close settlement:', error);
+      alert('Günlük hesap kapama başarısız oldu');
+    } finally {
+      setClosingSettlement(false);
     }
   };
 
@@ -161,6 +198,100 @@ export default function CourierDashboard() {
         {/* Location Tracker */}
         <div className="card mb-6">
           <CourierLocationTracker />
+        </div>
+
+        {/* Daily Settlement */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-xl font-semibold">Günlük Hesap Kapama</h2>
+              <p className="text-sm text-gray-600">
+                Restoran bazlı teslimat adetleri ve komisyon sonrası ödenecek tutarlar
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="date"
+                className="input"
+                value={settlementDate}
+                onChange={(e) => setSettlementDate(e.target.value)}
+              />
+              <button
+                onClick={handleCloseSettlement}
+                disabled={closingSettlement || settlementLoading || !settlementReport?.totals?.openRestaurants}
+                className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {closingSettlement ? 'Kapatılıyor...' : 'Gün Sonu Hesap Kapat'}
+              </button>
+            </div>
+          </div>
+
+          {settlementLoading ? (
+            <p className="text-sm text-gray-500">Rapor yükleniyor...</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                  <p className="text-xs text-blue-700">Toplam Restoran</p>
+                  <p className="text-lg font-semibold text-blue-900">{settlementReport?.totals?.totalRestaurants || 0}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
+                  <p className="text-xs text-indigo-700">Toplam Paket</p>
+                  <p className="text-lg font-semibold text-indigo-900">{settlementReport?.totals?.totalPackages || 0}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-orange-50 border border-orange-100">
+                  <p className="text-xs text-orange-700">Açık Hesap</p>
+                  <p className="text-lg font-semibold text-orange-900">{settlementReport?.totals?.openRestaurants || 0}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-green-50 border border-green-100">
+                  <p className="text-xs text-green-700">Restorana Ödenecek</p>
+                  <p className="text-lg font-semibold text-green-900">
+                    {(settlementReport?.totals?.totalAmountToRestaurant || 0).toFixed(2)} ₺
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b">
+                      <th className="py-2 pr-4">Restoran</th>
+                      <th className="py-2 pr-4">Paket</th>
+                      <th className="py-2 pr-4">Brüt</th>
+                      <th className="py-2 pr-4">Komisyon</th>
+                      <th className="py-2 pr-4">Kurye Ücreti</th>
+                      <th className="py-2 pr-4">Ödenecek</th>
+                      <th className="py-2">Durum</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(settlementReport?.rows || []).map((row: any) => (
+                      <tr key={row.restaurantId} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-medium">{row.restaurantName}</td>
+                        <td className="py-2 pr-4">{row.packageCount}</td>
+                        <td className="py-2 pr-4">{row.grossAmount.toFixed(2)} ₺</td>
+                        <td className="py-2 pr-4">{row.commissionAmount.toFixed(2)} ₺</td>
+                        <td className="py-2 pr-4">{row.courierFeeAmount.toFixed(2)} ₺</td>
+                        <td className="py-2 pr-4 font-semibold">{row.amountToRestaurant.toFixed(2)} ₺</td>
+                        <td className="py-2">
+                          <span className={`px-2 py-1 rounded text-xs ${row.isClosed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                            {row.isClosed ? 'Kapalı' : 'Açık'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {!settlementReport?.rows?.length && (
+                      <tr>
+                        <td colSpan={7} className="py-6 text-center text-gray-500">
+                          Bu tarih için hesap kapama verisi bulunamadı.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Orders */}

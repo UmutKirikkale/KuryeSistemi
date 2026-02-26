@@ -19,5 +19,15 @@ export const financialService = {
   getMonthlyReport: async (year?: number, month?: number) => {
     const response = await api.get('/financial/monthly', { params: { year, month } });
     return response.data;
+  },
+
+  getCourierSettlement: async (date?: string) => {
+    const response = await api.get('/financial/courier/settlement', { params: { date } });
+    return response.data;
+  },
+
+  closeCourierSettlement: async (date?: string) => {
+    const response = await api.post('/financial/courier/settlement/close', { date });
+    return response.data;
   }
 };

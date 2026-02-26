@@ -3,7 +3,9 @@ import {
   getRestaurantFinancials,
   getCourierEarnings,
   getDailyReport,
-  getMonthlyReport
+  getMonthlyReport,
+  getCourierDailySettlement,
+  closeCourierDailySettlement
 } from '../controllers/financial.controller';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -23,5 +25,11 @@ router.get('/daily', getDailyReport);
 
 // Aylık rapor
 router.get('/monthly', getMonthlyReport);
+
+// Kurye günlük restoran bazlı hesap özeti
+router.get('/courier/settlement', authorize('COURIER', 'ADMIN'), getCourierDailySettlement);
+
+// Kurye günlük hesap kapama
+router.post('/courier/settlement/close', authorize('COURIER', 'ADMIN'), closeCourierDailySettlement);
 
 export default router;

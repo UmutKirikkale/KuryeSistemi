@@ -3,6 +3,133 @@ import { AuthRequest } from '../middleware/auth';
 import { prisma } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 
+const getDayBounds = (dateInput?: string) => {
+  const targetDate = dateInput ? new Date(dateInput) : new Date();
+
+  if (Number.isNaN(targetDate.getTime())) {
+    throw new AppError('Invalid date', 400);
+  }
+
+  const startOfDay = new Date(targetDate);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(targetDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const dayKey = startOfDay.toISOString().slice(0, 10);
+
+  return { targetDate, startOfDay, endOfDay, dayKey };
+};
+
+const getCourierDailySettlementSummary = async (courierId: string, dateInput?: string) => {
+  const { targetDate, startOfDay, endOfDay, dayKey } = getDayBounds(dateInput);
+
+  const deliveredCashOrders = await prisma.order.findMany({
+    where: {
+      courierId,
+      status: 'DELIVERED',
+      deliveredAt: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      OR: [
+        { paymentMethod: 'CASH' },
+        { paymentMethod: null }
+      ]
+    },
+    include: {
+      restaurant: {
+        select: {
+          id: true,
+          name: true
+        }
+      }
+    },
+    orderBy: { deliveredAt: 'desc' }
+  });
+
+  const grouped = new Map<string, {
+    restaurantId: string;
+    restaurantName: string;
+    packageCount: number;
+    grossAmount: number;
+    commissionAmount: number;
+    courierFeeAmount: number;
+    amountToRestaurant: number;
+  }>();
+
+  deliveredCashOrders.forEach((order: any) => {
+    const restaurantId = order.restaurantId;
+    const existing = grouped.get(restaurantId) || {
+      restaurantId,
+      restaurantName: order.restaurant?.name || 'Restoran',
+      packageCount: 0,
+      grossAmount: 0,
+      commissionAmount: 0,
+      courierFeeAmount: 0,
+      amountToRestaurant: 0
+    };
+
+    existing.packageCount += 1;
+    existing.grossAmount += order.orderAmount || 0;
+    existing.commissionAmount += order.commissionAmount || 0;
+    existing.courierFeeAmount += order.courierFee || 0;
+    existing.amountToRestaurant += (order.orderAmount || 0) - (order.commissionAmount || 0) - (order.courierFee || 0);
+
+    grouped.set(restaurantId, existing);
+  });
+
+  const restaurants = Array.from(grouped.values());
+
+  const settlementTransactions = await prisma.financialTransaction.findMany({
+    where: {
+      transactionType: 'COURIER_SETTLEMENT',
+      date: {
+        gte: startOfDay,
+        lte: endOfDay
+      },
+      description: {
+        contains: `courier:${courierId}|date:${dayKey}|`
+      }
+    },
+    select: {
+      restaurantId: true,
+      amount: true,
+      description: true,
+      date: true
+    }
+  });
+
+  const closedRestaurantIds = new Set(
+    settlementTransactions
+      .map((tx: any) => tx.restaurantId)
+      .filter(Boolean)
+  );
+
+  const rows = restaurants.map((item) => ({
+    ...item,
+    isClosed: closedRestaurantIds.has(item.restaurantId)
+  }));
+
+  const totals = {
+    totalRestaurants: rows.length,
+    totalPackages: rows.reduce((sum, item) => sum + item.packageCount, 0),
+    totalGrossAmount: rows.reduce((sum, item) => sum + item.grossAmount, 0),
+    totalCommissionAmount: rows.reduce((sum, item) => sum + item.commissionAmount, 0),
+    totalCourierFeeAmount: rows.reduce((sum, item) => sum + item.courierFeeAmount, 0),
+    totalAmountToRestaurant: rows.reduce((sum, item) => sum + item.amountToRestaurant, 0),
+    closedRestaurants: rows.filter((item) => item.isClosed).length,
+    openRestaurants: rows.filter((item) => !item.isClosed).length
+  };
+
+  return {
+    date: targetDate,
+    dayKey,
+    rows,
+    totals
+  };
+};
+
 export const getRestaurantFinancials = async (req: AuthRequest, res: Response) => {
   try {
     const { startDate, endDate } = req.query;
@@ -316,6 +443,68 @@ export const getMonthlyReport = async (req: AuthRequest, res: Response) => {
     } else {
       throw new AppError('Invalid role for monthly report', 403);
     }
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getCourierDailySettlement = async (req: AuthRequest, res: Response) => {
+  try {
+    if (req.userRole !== 'COURIER' && req.userRole !== 'ADMIN') {
+      throw new AppError('Access denied', 403);
+    }
+
+    const { date } = req.query;
+    const report = await getCourierDailySettlementSummary(req.userId!, date as string | undefined);
+
+    res.json({ report });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const closeCourierDailySettlement = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (req.userRole !== 'COURIER' && req.userRole !== 'ADMIN') {
+      throw new AppError('Access denied', 403);
+    }
+
+    const { date } = req.body || {};
+    const report = await getCourierDailySettlementSummary(req.userId!, date);
+
+    const openRows = report.rows.filter((row) => !row.isClosed && row.amountToRestaurant > 0);
+
+    if (openRows.length === 0) {
+      return res.json({
+        message: 'Bu tarih için kapatılacak açık hesap bulunamadı',
+        closedCount: 0,
+        totalClosedAmount: 0,
+        report
+      });
+    }
+
+    const createdTransactions = await prisma.$transaction(
+      openRows.map((row) =>
+        prisma.financialTransaction.create({
+          data: {
+            transactionType: 'COURIER_SETTLEMENT',
+            amount: row.amountToRestaurant,
+            restaurantId: row.restaurantId,
+            description: `courier:${req.userId}|date:${report.dayKey}|restaurant:${row.restaurantId}|packages:${row.packageCount}`,
+            date: new Date()
+          }
+        })
+      )
+    );
+
+    const refreshedReport = await getCourierDailySettlementSummary(req.userId!, report.dayKey);
+
+    return res.json({
+      message: 'Günlük hesap kapama tamamlandı',
+      closedCount: createdTransactions.length,
+      totalClosedAmount: createdTransactions.reduce((sum, tx) => sum + tx.amount, 0),
+      report: refreshedReport
+    });
   } catch (error) {
     throw error;
   }
