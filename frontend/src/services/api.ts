@@ -13,6 +13,10 @@ const isCustomerEndpoint = (url?: string): boolean => {
   return typeof url === 'string' && url.includes('/customer/');
 };
 
+const isHtmlApiResponse = (contentType?: string): boolean => {
+  return typeof contentType === 'string' && contentType.includes('text/html');
+};
+
 // Request interceptor - JWT token ekle
 api.interceptors.request.use(
   (config) => {
@@ -33,7 +37,14 @@ api.interceptors.request.use(
 
 // Response interceptor - Hata yönetimi
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const contentType = response.headers?.['content-type'];
+    if (isHtmlApiResponse(contentType)) {
+      return Promise.reject(new Error('Backend unavailable'));
+    }
+
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       const isCustomerApi = isCustomerEndpoint(error.config?.url);
