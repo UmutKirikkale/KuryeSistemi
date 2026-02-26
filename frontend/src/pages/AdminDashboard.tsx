@@ -128,6 +128,33 @@ interface CourierPerformanceReport {
   }>;
 }
 
+interface CourierSettlementClosingItem {
+  id: string;
+  amount: number;
+  date: string;
+  dayKey?: string | null;
+  packageCount?: number | null;
+  restaurant?: {
+    id: string;
+    name: string;
+  } | null;
+  courier?: {
+    id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+interface CourierSettlementClosingReport {
+  summary: {
+    totalRecords: number;
+    totalClosedAmount: number;
+    startDate?: string | null;
+    endDate?: string | null;
+  };
+  settlements: CourierSettlementClosingItem[];
+}
+
 interface Restaurant {
   id: string;
   user: {
@@ -201,6 +228,7 @@ export default function AdminDashboard() {
   const [showCreateCourierModal, setShowCreateCourierModal] = useState(false);
   const [showCourierListModal, setShowCourierListModal] = useState(false);
   const [showCourierMapModal, setShowCourierMapModal] = useState(false);
+  const [showCourierSettlementModal, setShowCourierSettlementModal] = useState(false);
   const [showCourierEditModal, setShowCourierEditModal] = useState(false);
   const [showCourierPerformanceModal, setShowCourierPerformanceModal] = useState(false);
   const [showCreateRestaurantModal, setShowCreateRestaurantModal] = useState(false);
@@ -236,6 +264,10 @@ export default function AdminDashboard() {
   const [deleteLoading, setDeleteLoading] = useState<string | null>(null);
   const [selectedCourier, setSelectedCourier] = useState<Courier | null>(null);
   const [courierPerformance, setCourierPerformance] = useState<CourierPerformanceReport | null>(null);
+  const [courierSettlementReport, setCourierSettlementReport] = useState<CourierSettlementClosingReport | null>(null);
+  const [courierSettlementLoading, setCourierSettlementLoading] = useState(false);
+  const [settlementStartDate, setSettlementStartDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [settlementEndDate, setSettlementEndDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [performanceLoading, setPerformanceLoading] = useState(false);
   const [performanceDays, setPerformanceDays] = useState<number>(7);
   const [editPaymentPerOrder, setEditPaymentPerOrder] = useState<number>(0);
@@ -382,6 +414,32 @@ export default function AdminDashboard() {
     } finally {
       setPerformanceLoading(false);
     }
+  };
+
+  const fetchCourierSettlementClosings = async (startDate?: string, endDate?: string) => {
+    try {
+      setCourierSettlementLoading(true);
+      const report = await adminService.getCourierSettlementClosings({
+        startDate,
+        endDate,
+        limit: 500
+      });
+      setCourierSettlementReport(report);
+    } catch (error) {
+      console.error('Kurye hesap kapama raporu yuklenemedi:', error);
+      setCourierSettlementReport(null);
+    } finally {
+      setCourierSettlementLoading(false);
+    }
+  };
+
+  const handleOpenCourierSettlementReport = async () => {
+    setShowCourierSettlementModal(true);
+    await fetchCourierSettlementClosings(settlementStartDate, settlementEndDate);
+  };
+
+  const handleFilterCourierSettlementReport = async () => {
+    await fetchCourierSettlementClosings(settlementStartDate, settlementEndDate);
   };
 
   const handleSaveCourierPayment = async () => {
@@ -694,6 +752,14 @@ export default function AdminDashboard() {
                 >
                   <List className="w-4 h-4" />
                   <span>Liste</span>
+                </button>
+                <button
+                  onClick={handleOpenCourierSettlementReport}
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                  title="Kurye Hesap Kapama Raporu"
+                >
+                  <DollarSign className="w-4 h-4" />
+                  <span>Hesap</span>
                 </button>
                 <button
                   onClick={() => setShowCreateCourierModal(true)}
@@ -1966,6 +2032,100 @@ export default function AdminDashboard() {
               >
                 Kapat
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Kurye Hesap Kapama Raporu Modal */}
+      {showCourierSettlementModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Kurye Hesap Kapama Raporu</h2>
+              <button
+                onClick={() => setShowCourierSettlementModal(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6 text-gray-600" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-auto space-y-4">
+              <div className="flex flex-col md:flex-row gap-3 md:items-end">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Başlangıç</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={settlementStartDate}
+                    onChange={(e) => setSettlementStartDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Bitiş</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={settlementEndDate}
+                    onChange={(e) => setSettlementEndDate(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={handleFilterCourierSettlementReport}
+                  className="btn btn-primary"
+                  disabled={courierSettlementLoading}
+                >
+                  {courierSettlementLoading ? 'Yükleniyor...' : 'Filtrele'}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-3 rounded-lg bg-blue-50 border border-blue-100">
+                  <p className="text-xs text-blue-700">Kapanan Kayıt</p>
+                  <p className="text-xl font-semibold text-blue-900">
+                    {courierSettlementReport?.summary.totalRecords || 0}
+                  </p>
+                </div>
+                <div className="p-3 rounded-lg bg-green-50 border border-green-100">
+                  <p className="text-xs text-green-700">Toplam Kapatılan Tutar</p>
+                  <p className="text-xl font-semibold text-green-900">
+                    ₺{(courierSettlementReport?.summary.totalClosedAmount || 0).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-50 text-left">
+                      <th className="px-3 py-2">Tarih</th>
+                      <th className="px-3 py-2">Kurye</th>
+                      <th className="px-3 py-2">Restoran</th>
+                      <th className="px-3 py-2">Paket</th>
+                      <th className="px-3 py-2">Tutar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(courierSettlementReport?.settlements || []).map((item) => (
+                      <tr key={item.id} className="border-t">
+                        <td className="px-3 py-2">{new Date(item.date).toLocaleString('tr-TR')}</td>
+                        <td className="px-3 py-2">{item.courier?.name || 'Kurye'}</td>
+                        <td className="px-3 py-2">{item.restaurant?.name || '-'}</td>
+                        <td className="px-3 py-2">{item.packageCount ?? '-'}</td>
+                        <td className="px-3 py-2 font-semibold">₺{item.amount.toFixed(2)}</td>
+                      </tr>
+                    ))}
+                    {!courierSettlementLoading && !courierSettlementReport?.settlements?.length && (
+                      <tr>
+                        <td className="px-3 py-6 text-center text-gray-500" colSpan={5}>
+                          Seçilen aralıkta kapatılmış hesap bulunamadı.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

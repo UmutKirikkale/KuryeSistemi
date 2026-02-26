@@ -44,6 +44,17 @@ export const adminService = {
     return response.data;
   },
 
+  getCourierSettlementClosings: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    courierId?: string;
+    restaurantId?: string;
+    limit?: number;
+  }) => {
+    const response = await api.get('/admin/couriers/settlements/closings', { params });
+    return response.data;
+  },
+
   toggleUserStatus: async (userId: string) => {
     const response = await api.patch(`/admin/users/${userId}/toggle-status`);
     return response.data;

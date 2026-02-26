@@ -1220,3 +1220,113 @@ export const getAllRestaurants = async (req: AuthRequest, res: Response): Promis
     throw error;
   }
 };
+
+export const getCourierSettlementClosings = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (req.userRole !== 'ADMIN') {
+      throw new AppError('Access denied', 403);
+    }
+
+    const { startDate, endDate, courierId, restaurantId, limit = '200' } = req.query;
+    const take = Math.min(Math.max(parseInt(limit as string, 10) || 200, 1), 500);
+
+    const whereClause: any = {
+      transactionType: 'COURIER_SETTLEMENT'
+    };
+
+    if (restaurantId) {
+      whereClause.restaurantId = restaurantId;
+    }
+
+    if (startDate || endDate) {
+      whereClause.date = {};
+      if (startDate) {
+        whereClause.date.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        whereClause.date.lte = new Date(endDate as string);
+      }
+    }
+
+    if (courierId) {
+      whereClause.description = {
+        contains: `courier:${courierId}|`
+      };
+    }
+
+    const transactions = await prisma.financialTransaction.findMany({
+      where: whereClause,
+      include: {
+        restaurant: {
+          select: {
+            id: true,
+            name: true
+          }
+        }
+      },
+      orderBy: { date: 'desc' },
+      take
+    });
+
+    const parsedRows = transactions.map((transaction: any) => {
+      const description = transaction.description || '';
+      const courierMatch = description.match(/courier:([^|]+)/);
+      const dayMatch = description.match(/date:([^|]+)/);
+      const packageMatch = description.match(/packages:(\d+)/);
+
+      return {
+        transaction,
+        courierId: courierMatch?.[1] || null,
+        dayKey: dayMatch?.[1] || null,
+        packageCount: packageMatch ? parseInt(packageMatch[1], 10) : null
+      };
+    });
+
+    const courierIds = Array.from(
+      new Set(parsedRows.map((row) => row.courierId).filter(Boolean))
+    ) as string[];
+
+    const courierUsers = courierIds.length > 0
+      ? await prisma.user.findMany({
+          where: {
+            id: {
+              in: courierIds
+            }
+          },
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        })
+      : [];
+
+    const courierMap = new Map(courierUsers.map((courier) => [courier.id, courier]));
+
+    const settlements = parsedRows.map((row) => ({
+      id: row.transaction.id,
+      amount: row.transaction.amount,
+      date: row.transaction.date,
+      dayKey: row.dayKey,
+      packageCount: row.packageCount,
+      restaurant: row.transaction.restaurant,
+      courier: row.courierId
+        ? (courierMap.get(row.courierId) || { id: row.courierId, name: 'Kurye', email: '' })
+        : null
+    }));
+
+    const summary = {
+      totalRecords: settlements.length,
+      totalClosedAmount: settlements.reduce((sum, item) => sum + item.amount, 0),
+      startDate: startDate || null,
+      endDate: endDate || null
+    };
+
+    res.json({
+      summary,
+      settlements
+    });
+  } catch (error) {
+    throw error;
+  }
+};

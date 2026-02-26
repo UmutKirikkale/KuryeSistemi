@@ -17,7 +17,8 @@ import {
   getRestaurantFinancialReport,
   updateRestaurantCommission,
   getSystemSettings,
-  updateSystemSettings
+  updateSystemSettings,
+  getCourierSettlementClosings
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -46,6 +47,7 @@ router.patch('/restaurants/:restaurantId/commission', updateRestaurantCommission
 // Kurye yönetimi
 router.get('/couriers', getAllCouriers);
 router.get('/couriers/:courierId/performance', getCourierPerformanceReport);
+router.get('/couriers/settlements/closings', getCourierSettlementClosings);
 router.post('/couriers', createCourier);
 router.patch('/couriers/:courierId', updateCourier);
 router.delete('/couriers/:courierId', deleteCourier);
