@@ -295,7 +295,11 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
     } else if (req.userRole === 'COURIER') {
       whereClause.OR = [
         { courierId: req.userId },
-        { status: 'PENDING' } // Bekleyen siparişleri göster
+        {
+          status: {
+            in: ['PENDING', 'APPROVED', 'PREPARING']
+          }
+        } // Uygun siparişleri göster
       ];
     }
 

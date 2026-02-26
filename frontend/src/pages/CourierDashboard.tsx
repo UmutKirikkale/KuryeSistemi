@@ -108,7 +108,7 @@ export default function CourierDashboard() {
   };
 
   const myOrders = orders.filter(
-    (order) => order.courier?.id === user?.id || order.status === 'PENDING'
+    (order) => order.courier?.id === user?.id || ['PENDING', 'APPROVED', 'PREPARING'].includes(order.status)
   );
 
   return (

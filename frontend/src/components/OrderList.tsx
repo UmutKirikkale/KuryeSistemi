@@ -228,7 +228,7 @@ export default function OrderList({ orders, role }: OrderListProps) {
                 </button>
               )}
 
-              {role === 'COURIER' && order.status === 'PENDING' && (
+                {role === 'COURIER' && ['PENDING', 'APPROVED', 'PREPARING'].includes(order.status) && (
                 <button
                   onClick={() => handleAssign(order.id)}
                   className="btn btn-primary btn-sm"
