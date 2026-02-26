@@ -92,7 +92,7 @@ const isTransitionAllowed = (
 };
 
 const getSystemSettings = async () => {
-  const settings = await prisma.systemSettings.upsert({
+  const settings = await (prisma.systemSettings as any).upsert({
     where: { id: 1 },
     update: {},
     create: {
@@ -174,7 +174,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     const externalOrderId = validatedData.externalOrderId?.trim();
 
     if (sourcePlatform && externalOrderId) {
-      const existingOrder = await prisma.order.findFirst({
+      const existingOrder = await (prisma.order as any).findFirst({
         where: {
           restaurantId: restaurant.id,
           sourcePlatform,
@@ -206,7 +206,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     const commissionAmount = restaurant.commissionPerOrder + platformExtraCommission;
 
     // Siparişi oluştur
-    const order = await prisma.order.create({
+    const order = await (prisma.order as any).create({
       data: {
         orderNumber,
         restaurantId: restaurant.id,

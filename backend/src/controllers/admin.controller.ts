@@ -639,7 +639,7 @@ export const getSystemSettings = async (req: AuthRequest, res: Response): Promis
       throw new AppError('Access denied', 403);
     }
 
-    const settings = await prisma.systemSettings.upsert({
+    const settings = await (prisma.systemSettings as any).upsert({
       where: { id: 1 },
       update: {},
       create: {
@@ -667,7 +667,7 @@ export const updateSystemSettings = async (req: AuthRequest, res: Response): Pro
 
     const validatedData = systemSettingsSchema.parse(req.body);
 
-    const settings = await prisma.systemSettings.upsert({
+    const settings = await (prisma.systemSettings as any).upsert({
       where: { id: 1 },
       update: {
         courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
