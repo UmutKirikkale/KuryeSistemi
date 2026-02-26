@@ -731,15 +731,15 @@ export default function AdminDashboard() {
           </div>
 
           <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col gap-3 mb-4">
               <div className="flex items-center space-x-3">
                 <Bike className="w-6 h-6 text-purple-600" />
                 <h3 className="text-lg font-semibold text-gray-900">Kuryeler</h3>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setShowCourierMapModal(true)}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm whitespace-nowrap"
                   title="Kurye Haritası"
                 >
                   <MapPin className="w-4 h-4" />
@@ -747,7 +747,7 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={handleOpenCourierList}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm whitespace-nowrap"
                   title="Kurye Listesi"
                 >
                   <List className="w-4 h-4" />
@@ -755,15 +755,16 @@ export default function AdminDashboard() {
                 </button>
                 <button
                   onClick={handleOpenCourierSettlementReport}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm"
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors text-sm whitespace-nowrap"
                   title="Kurye Hesap Kapama Raporu"
                 >
                   <DollarSign className="w-4 h-4" />
-                  <span>Hesap</span>
+                  <span className="hidden sm:inline">Hesap</span>
+                  <span className="sm:hidden">Rapor</span>
                 </button>
                 <button
                   onClick={() => setShowCreateCourierModal(true)}
-                  className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm"
+                  className="flex items-center space-x-1 px-3 py-1.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm whitespace-nowrap"
                   title="Yeni Kurye Ekle"
                 >
                   <UserPlus className="w-4 h-4" />
