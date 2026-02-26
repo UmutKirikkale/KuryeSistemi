@@ -23,6 +23,66 @@ interface AuthState {
   loadUser: () => void;
 }
 
+const DEMO_PASSWORD = '123456';
+
+const demoUsersByEmail: Record<string, User> = {
+  'admin@test.com': {
+    id: 'demo-admin',
+    email: 'admin@test.com',
+    name: 'Demo Admin',
+    role: 'ADMIN'
+  },
+  'restaurant@test.com': {
+    id: 'demo-restaurant-en',
+    email: 'restaurant@test.com',
+    name: 'Demo Restaurant',
+    role: 'RESTAURANT'
+  },
+  'restoran@test.com': {
+    id: 'demo-restaurant-tr',
+    email: 'restoran@test.com',
+    name: 'Demo Restoran',
+    role: 'RESTAURANT'
+  },
+  'courier@test.com': {
+    id: 'demo-courier-en',
+    email: 'courier@test.com',
+    name: 'Demo Courier',
+    role: 'COURIER'
+  },
+  'kurye@test.com': {
+    id: 'demo-courier-tr',
+    email: 'kurye@test.com',
+    name: 'Demo Kurye',
+    role: 'COURIER'
+  }
+};
+
+const isVercelRuntime = (): boolean => {
+  return window.location.hostname.endsWith('.vercel.app');
+};
+
+const isLikelyBackendUnavailable = (error: any): boolean => {
+  if (!error) {
+    return true;
+  }
+
+  if (!error.response) {
+    return true;
+  }
+
+  const contentType = error.response.headers?.['content-type'] || '';
+  return String(contentType).includes('text/html');
+};
+
+const getDemoUser = (data: LoginData): User | null => {
+  if (data.password !== DEMO_PASSWORD) {
+    return null;
+  }
+
+  return demoUsersByEmail[data.email.toLowerCase()] || null;
+};
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   token: null,
@@ -34,6 +94,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await authService.login(data);
+
+      if (!response?.token || !response?.user?.role) {
+        throw new Error('Invalid login response');
+      }
+
       localStorage.setItem('token', response.token);
       localStorage.setItem('user', JSON.stringify(response.user));
 
@@ -47,6 +112,24 @@ export const useAuthStore = create<AuthState>((set) => ({
       // WebSocket bağlantısı kur
       wsService.connect(response.token);
     } catch (error: any) {
+      const demoUser = getDemoUser(data);
+
+      if (isVercelRuntime() && demoUser && isLikelyBackendUnavailable(error)) {
+        const demoToken = 'demo-token';
+        localStorage.setItem('token', demoToken);
+        localStorage.setItem('user', JSON.stringify(demoUser));
+
+        set({
+          user: demoUser,
+          token: demoToken,
+          isAuthenticated: true,
+          isLoading: false,
+          error: null
+        });
+
+        return;
+      }
+
       set({
         error: error.response?.data?.error || 'Login failed',
         isLoading: false
