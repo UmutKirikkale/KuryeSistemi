@@ -35,11 +35,7 @@ setupWebSocket(io);
 const PORT = process.env.PORT || 5000;
 
 const shouldSeedDemoUsers = (): boolean => {
-  if (process.env.SEED_DEMO_USERS === 'true') {
-    return true;
-  }
-
-  return process.env.NODE_ENV !== 'production';
+  return process.env.SEED_DEMO_USERS !== 'false';
 };
 
 const bootstrap = async () => {
