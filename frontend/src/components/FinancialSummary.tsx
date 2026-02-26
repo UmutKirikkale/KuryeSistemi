@@ -17,9 +17,9 @@ export default function FinancialSummary({ data }: { data: any }) {
         </div>
 
         <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-          <p className="text-sm text-red-700 mb-1">Komisyonlar</p>
+          <p className="text-sm text-red-700 mb-1">Komisyon Oranı</p>
           <p className="text-2xl font-bold text-red-900">
-            {summary.totalCommissions.toFixed(2)} ₺
+            {summary.commissionPerOrder?.toFixed(2) || '0.00'} ₺
           </p>
         </div>
 
@@ -72,7 +72,7 @@ export default function FinancialSummary({ data }: { data: any }) {
                         ? 'Gelir'
                         : transaction.transactionType === 'COURIER_FEE'
                         ? 'Kurye'
-                        : 'Komisyon'}
+                          : 'Komisyon'}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">

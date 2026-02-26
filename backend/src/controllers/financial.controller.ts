@@ -209,6 +209,7 @@ export const getRestaurantFinancials = async (req: AuthRequest, res: Response) =
       totalEarnings: deliveredOrders.reduce((sum: number, order: any) => sum + (order.orderAmount || 0), 0),
       totalCourierFees: deliveredOrders.reduce((sum: number, order: any) => sum + (order.courierFee || 0), 0),
       totalCommissions: deliveredOrders.reduce((sum: number, order: any) => sum + (order.commissionAmount || 0), 0),
+      commissionPerOrder: restaurant?.commissionPerOrder || 0,
       netBalance: 0,
       transactionCount: transactions.length
     };
