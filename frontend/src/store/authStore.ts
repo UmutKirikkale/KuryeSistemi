@@ -23,6 +23,8 @@ interface AuthState {
   loadUser: () => void;
 }
 
+const ENABLE_DEMO_LOGIN = import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'true';
+
 const DEMO_PASSWORD = '123456';
 
 const demoUsersByEmail: Record<string, User> = {
@@ -110,7 +112,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: any) {
       const demoUser = getDemoUser(data);
 
-      if (demoUser && isLikelyBackendUnavailable(error)) {
+      if (ENABLE_DEMO_LOGIN && demoUser && isLikelyBackendUnavailable(error)) {
         const demoToken = 'demo-token';
         localStorage.setItem('token', demoToken);
         localStorage.setItem('user', JSON.stringify(demoUser));
