@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useLocationStore } from '../store/locationStore';
 import { adminService } from '../services/adminService';
+import { locationService } from '../services/locationService';
 import { wsService } from '../services/websocket';
 import { 
   Users, 
@@ -180,7 +181,7 @@ interface SystemSettings {
 
 export default function AdminDashboard() {
   const { user, logout } = useAuthStore();
-  const { courierLocations, updateCourierLocation } = useLocationStore();
+  const { courierLocations, updateCourierLocation, setCourierLocations } = useLocationStore();
   const [stats, setStats] = useState<Stats>({
     totalUsers: 0,
     totalOrders: 0,
@@ -245,6 +246,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchDashboardData();
     fetchSystemSettings();
+    loadCourierLocations();
+
+    const refreshInterval = window.setInterval(() => {
+      loadCourierLocations();
+    }, 15000);
 
     // WebSocket dinleyicilerini kur
     wsService.onLocationUpdate((data) => {
@@ -257,9 +263,18 @@ export default function AdminDashboard() {
     });
 
     return () => {
-      // Cleanup
+      window.clearInterval(refreshInterval);
     };
   }, [updateCourierLocation]);
+
+  const loadCourierLocations = async () => {
+    try {
+      const response = await locationService.getCourierLocations();
+      setCourierLocations(response.couriers || []);
+    } catch (error) {
+      console.error('Kurye konumlari yuklenemedi:', error);
+    }
+  };
 
   const fetchSystemSettings = async () => {
     try {

@@ -4,6 +4,7 @@ import { useOrderStore } from '../store/orderStore';
 import { useLocationStore } from '../store/locationStore';
 import { wsService } from '../services/websocket';
 import { restaurantService } from '../services/restaurantService';
+import { locationService } from '../services/locationService';
 import { financialService } from '../services/financialService';
 import {
   LogOut,
@@ -115,8 +116,8 @@ export default function RestaurantDashboard() {
 
   const loadCourierLocations = async () => {
     try {
-      const response = await restaurantService.getCourierLocations();
-      setCourierLocations(response.courierLocations);
+      const response = await locationService.getCourierLocations();
+      setCourierLocations(response.couriers || []);
     } catch (error) {
       console.error('Failed to load courier locations:', error);
     }
