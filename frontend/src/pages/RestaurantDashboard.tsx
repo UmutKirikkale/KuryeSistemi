@@ -407,7 +407,12 @@ export default function RestaurantDashboard() {
             {activeTab === 'orders' && (
               <div>
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold">Siparişler</h2>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-semibold">Siparişler</h2>
+                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-red-100 text-red-700 border border-red-200">
+                      Toplam Komisyon: {(financialData?.summary.totalCommissions || 0).toFixed(2)} ₺
+                    </span>
+                  </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => setShowOCRModal(true)}
