@@ -33,6 +33,12 @@ const normalizePlatformCommissionTemplates = (input: unknown): Record<PlatformKe
   return result;
 };
 
+const hasMissingPlatformTemplateColumnError = (error: unknown) => {
+  const prismaError = error as { code?: string; meta?: { column_name?: string; column?: string } };
+  const missingColumn = String(prismaError?.meta?.column_name || prismaError?.meta?.column || '');
+  return prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates');
+};
+
 const systemSettingsSchema = z.object({
   courierAutoBusyAfterOrders: z.number().int().min(1).max(100),
   platformCommissionTemplates: z.object({
@@ -639,21 +645,42 @@ export const getSystemSettings = async (req: AuthRequest, res: Response): Promis
       throw new AppError('Access denied', 403);
     }
 
-    const settings = await (prisma.systemSettings as any).upsert({
-      where: { id: 1 },
-      update: {},
-      create: {
-        courierAutoBusyAfterOrders: 4,
-        platformCommissionTemplates: defaultPlatformCommissionTemplates
-      }
-    });
+    try {
+      const settings = await (prisma.systemSettings as any).upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+          courierAutoBusyAfterOrders: 4,
+          platformCommissionTemplates: defaultPlatformCommissionTemplates
+        }
+      });
 
-    res.json({
-      settings: {
-        ...settings,
-        platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
+      return res.json({
+        settings: {
+          ...settings,
+          platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
+        }
+      });
+    } catch (error) {
+      if (!hasMissingPlatformTemplateColumnError(error)) {
+        throw error;
       }
-    });
+
+      const legacySettings = await prisma.systemSettings.upsert({
+        where: { id: 1 },
+        update: {},
+        create: {
+          courierAutoBusyAfterOrders: 4
+        }
+      });
+
+      return res.json({
+        settings: {
+          ...legacySettings,
+          platformCommissionTemplates: { ...defaultPlatformCommissionTemplates }
+        }
+      });
+    }
   } catch (error) {
     throw error;
   }
@@ -667,17 +694,39 @@ export const updateSystemSettings = async (req: AuthRequest, res: Response): Pro
 
     const validatedData = systemSettingsSchema.parse(req.body);
 
-    const settings = await (prisma.systemSettings as any).upsert({
-      where: { id: 1 },
-      update: {
-        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
-        platformCommissionTemplates: validatedData.platformCommissionTemplates
-      },
-      create: {
-        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
-        platformCommissionTemplates: validatedData.platformCommissionTemplates
+    let settings: any;
+
+    try {
+      settings = await (prisma.systemSettings as any).upsert({
+        where: { id: 1 },
+        update: {
+          courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
+          platformCommissionTemplates: validatedData.platformCommissionTemplates
+        },
+        create: {
+          courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
+          platformCommissionTemplates: validatedData.platformCommissionTemplates
+        }
+      });
+    } catch (error) {
+      if (!hasMissingPlatformTemplateColumnError(error)) {
+        throw error;
       }
-    });
+
+      settings = await prisma.systemSettings.upsert({
+        where: { id: 1 },
+        update: {
+          courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders
+        },
+        create: {
+          courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders
+        }
+      });
+      settings = {
+        ...settings,
+        platformCommissionTemplates: { ...defaultPlatformCommissionTemplates }
+      };
+    }
 
     res.json({
       message: 'Settings updated successfully',

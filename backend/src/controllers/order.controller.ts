@@ -91,20 +91,45 @@ const isTransitionAllowed = (
   return (transitions[fromStatus] || []).includes(toStatus);
 };
 
-const getSystemSettings = async () => {
-  const settings = await (prisma.systemSettings as any).upsert({
-    where: { id: 1 },
-    update: {},
-    create: {
-      courierAutoBusyAfterOrders: 4,
-      platformCommissionTemplates: defaultPlatformCommissionTemplates
-    }
-  });
+const hasMissingPlatformTemplateColumnError = (error: unknown) => {
+  const prismaError = error as { code?: string; meta?: { column_name?: string; column?: string } };
+  const missingColumn = String(prismaError?.meta?.column_name || prismaError?.meta?.column || '');
+  return prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates');
+};
 
-  return {
-    ...settings,
-    platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
-  };
+const getSystemSettings = async () => {
+  try {
+    const settings = await (prisma.systemSettings as any).upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        courierAutoBusyAfterOrders: 4,
+        platformCommissionTemplates: defaultPlatformCommissionTemplates
+      }
+    });
+
+    return {
+      ...settings,
+      platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
+    };
+  } catch (error) {
+    if (!hasMissingPlatformTemplateColumnError(error)) {
+      throw error;
+    }
+
+    const legacySettings = await prisma.systemSettings.upsert({
+      where: { id: 1 },
+      update: {},
+      create: {
+        courierAutoBusyAfterOrders: 4
+      }
+    });
+
+    return {
+      ...legacySettings,
+      platformCommissionTemplates: { ...defaultPlatformCommissionTemplates }
+    };
+  }
 };
 
 const syncCourierAvailability = async (courierUserId: string) => {
