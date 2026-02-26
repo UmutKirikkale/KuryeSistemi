@@ -177,24 +177,41 @@ export const getRestaurantFinancials = async (req: AuthRequest, res: Response) =
       orderBy: { date: 'desc' }
     });
 
+    const deliveredOrderWhere: any = {
+      status: 'DELIVERED'
+    };
+
+    if (restaurant) {
+      deliveredOrderWhere.restaurantId = restaurant.id;
+    }
+
+    if (startDate || endDate) {
+      deliveredOrderWhere.deliveredAt = {};
+      if (startDate) {
+        deliveredOrderWhere.deliveredAt.gte = new Date(startDate as string);
+      }
+      if (endDate) {
+        deliveredOrderWhere.deliveredAt.lte = new Date(endDate as string);
+      }
+    }
+
+    const deliveredOrders = await prisma.order.findMany({
+      where: deliveredOrderWhere,
+      select: {
+        orderAmount: true,
+        courierFee: true,
+        commissionAmount: true
+      }
+    });
+
     // Özet hesaplamalar
     const summary = {
-      totalEarnings: 0,
-      totalCourierFees: 0,
-      totalCommissions: 0,
+      totalEarnings: deliveredOrders.reduce((sum: number, order: any) => sum + (order.orderAmount || 0), 0),
+      totalCourierFees: deliveredOrders.reduce((sum: number, order: any) => sum + (order.courierFee || 0), 0),
+      totalCommissions: deliveredOrders.reduce((sum: number, order: any) => sum + (order.commissionAmount || 0), 0),
       netBalance: 0,
       transactionCount: transactions.length
     };
-
-    transactions.forEach((transaction: any) => {
-      if (transaction.transactionType === 'EARNING') {
-        summary.totalEarnings += transaction.amount;
-      } else if (transaction.transactionType === 'COURIER_FEE') {
-        summary.totalCourierFees += Math.abs(transaction.amount);
-      } else if (transaction.transactionType === 'COMMISSION') {
-        summary.totalCommissions += Math.abs(transaction.amount);
-      }
-    });
 
     summary.netBalance = summary.totalEarnings - summary.totalCourierFees - summary.totalCommissions;
 
