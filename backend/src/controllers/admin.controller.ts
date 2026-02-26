@@ -5,8 +5,43 @@ import { AppError } from '../middleware/errorHandler';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
+const PLATFORM_KEYS = ['YEMEKSEPETI', 'FEEDME', 'GETIRYEMEK', 'TRENDYOLYEMEK', 'DIGER'] as const;
+type PlatformKey = typeof PLATFORM_KEYS[number];
+
+const defaultPlatformCommissionTemplates: Record<PlatformKey, number> = {
+  YEMEKSEPETI: 35,
+  FEEDME: 25,
+  GETIRYEMEK: 30,
+  TRENDYOLYEMEK: 30,
+  DIGER: 20
+};
+
+const normalizePlatformCommissionTemplates = (input: unknown): Record<PlatformKey, number> => {
+  const result: Record<PlatformKey, number> = { ...defaultPlatformCommissionTemplates };
+
+  if (!input || typeof input !== 'object') {
+    return result;
+  }
+
+  for (const key of PLATFORM_KEYS) {
+    const rawValue = (input as Record<string, unknown>)[key];
+    if (typeof rawValue === 'number' && Number.isFinite(rawValue) && rawValue >= 0 && rawValue <= 100) {
+      result[key] = rawValue;
+    }
+  }
+
+  return result;
+};
+
 const systemSettingsSchema = z.object({
-  courierAutoBusyAfterOrders: z.number().int().min(1).max(100)
+  courierAutoBusyAfterOrders: z.number().int().min(1).max(100),
+  platformCommissionTemplates: z.object({
+    YEMEKSEPETI: z.number().min(0).max(100),
+    FEEDME: z.number().min(0).max(100),
+    GETIRYEMEK: z.number().min(0).max(100),
+    TRENDYOLYEMEK: z.number().min(0).max(100),
+    DIGER: z.number().min(0).max(100)
+  })
 });
 
 export const getDashboardStats = async (req: AuthRequest, res: Response): Promise<any> => {
@@ -607,10 +642,18 @@ export const getSystemSettings = async (req: AuthRequest, res: Response): Promis
     const settings = await prisma.systemSettings.upsert({
       where: { id: 1 },
       update: {},
-      create: { courierAutoBusyAfterOrders: 4 }
+      create: {
+        courierAutoBusyAfterOrders: 4,
+        platformCommissionTemplates: defaultPlatformCommissionTemplates
+      }
     });
 
-    res.json({ settings });
+    res.json({
+      settings: {
+        ...settings,
+        platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
+      }
+    });
   } catch (error) {
     throw error;
   }
@@ -627,10 +670,12 @@ export const updateSystemSettings = async (req: AuthRequest, res: Response): Pro
     const settings = await prisma.systemSettings.upsert({
       where: { id: 1 },
       update: {
-        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders
+        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
+        platformCommissionTemplates: validatedData.platformCommissionTemplates
       },
       create: {
-        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders
+        courierAutoBusyAfterOrders: validatedData.courierAutoBusyAfterOrders,
+        platformCommissionTemplates: validatedData.platformCommissionTemplates
       }
     });
 

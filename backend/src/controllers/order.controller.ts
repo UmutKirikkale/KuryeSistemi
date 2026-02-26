@@ -13,12 +13,29 @@ const platformSchema = z.enum([
   'DIGER'
 ]);
 
-const platformCommissionExtras: Record<z.infer<typeof platformSchema>, number> = {
+const defaultPlatformCommissionTemplates: Record<z.infer<typeof platformSchema>, number> = {
   YEMEKSEPETI: 35,
   FEEDME: 25,
   GETIRYEMEK: 30,
   TRENDYOLYEMEK: 30,
   DIGER: 20
+};
+
+const normalizePlatformCommissionTemplates = (input: unknown): Record<z.infer<typeof platformSchema>, number> => {
+  const normalized = { ...defaultPlatformCommissionTemplates };
+
+  if (!input || typeof input !== 'object') {
+    return normalized;
+  }
+
+  for (const key of Object.keys(defaultPlatformCommissionTemplates) as Array<z.infer<typeof platformSchema>>) {
+    const rawValue = (input as Record<string, unknown>)[key];
+    if (typeof rawValue === 'number' && Number.isFinite(rawValue) && rawValue >= 0 && rawValue <= 100) {
+      normalized[key] = rawValue;
+    }
+  }
+
+  return normalized;
 };
 
 const createOrderSchema = z.object({
@@ -75,11 +92,19 @@ const isTransitionAllowed = (
 };
 
 const getSystemSettings = async () => {
-  return prisma.systemSettings.upsert({
+  const settings = await prisma.systemSettings.upsert({
     where: { id: 1 },
     update: {},
-    create: { courierAutoBusyAfterOrders: 4 }
+    create: {
+      courierAutoBusyAfterOrders: 4,
+      platformCommissionTemplates: defaultPlatformCommissionTemplates
+    }
   });
+
+  return {
+    ...settings,
+    platformCommissionTemplates: normalizePlatformCommissionTemplates(settings.platformCommissionTemplates)
+  };
 };
 
 const syncCourierAvailability = async (courierUserId: string) => {
@@ -172,10 +197,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
 
     // Kurye ücreti artık kullanılmıyor (sadece commission kullanıyoruz)
     const courierFee = 0;
+    const systemSettings = await getSystemSettings();
 
     // Komisyon hesapla (restoran komisyonu + platform şablonu)
     const platformExtraCommission = sourcePlatform
-      ? (platformCommissionExtras[sourcePlatform] || 0)
+      ? (systemSettings.platformCommissionTemplates[sourcePlatform] || 0)
       : 0;
     const commissionAmount = restaurant.commissionPerOrder + platformExtraCommission;
 

@@ -204,7 +204,30 @@ interface FinancialReport {
 
 interface SystemSettings {
   courierAutoBusyAfterOrders: number;
+  platformCommissionTemplates: {
+    YEMEKSEPETI: number;
+    FEEDME: number;
+    GETIRYEMEK: number;
+    TRENDYOLYEMEK: number;
+    DIGER: number;
+  };
 }
+
+const defaultPlatformCommissionTemplates: SystemSettings['platformCommissionTemplates'] = {
+  YEMEKSEPETI: 35,
+  FEEDME: 25,
+  GETIRYEMEK: 30,
+  TRENDYOLYEMEK: 30,
+  DIGER: 20
+};
+
+const platformLabels: Record<keyof SystemSettings['platformCommissionTemplates'], string> = {
+  YEMEKSEPETI: 'Yemeksepeti',
+  FEEDME: 'Feedme',
+  GETIRYEMEK: 'GetirYemek',
+  TRENDYOLYEMEK: 'TrendyolYemek',
+  DIGER: 'Diğer'
+};
 
 export default function AdminDashboard() {
   const { user, logout } = useAuthStore();
@@ -240,6 +263,7 @@ export default function AdminDashboard() {
   const [newCommission, setNewCommission] = useState<number>(0);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [autoBusyAfterOrders, setAutoBusyAfterOrders] = useState<number>(4);
+  const [platformCommissionTemplates, setPlatformCommissionTemplates] = useState<SystemSettings['platformCommissionTemplates']>(defaultPlatformCommissionTemplates);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [courierForm, setCourierForm] = useState({
     email: '',
@@ -313,6 +337,7 @@ export default function AdminDashboard() {
       const { settings } = await adminService.getSystemSettings();
       setSystemSettings(settings);
       setAutoBusyAfterOrders(settings.courierAutoBusyAfterOrders ?? 4);
+      setPlatformCommissionTemplates(settings.platformCommissionTemplates ?? defaultPlatformCommissionTemplates);
     } catch (error) {
       console.error('Sistem ayarlari yuklenemedi:', error);
     }
@@ -324,12 +349,20 @@ export default function AdminDashboard() {
       return;
     }
 
+    const invalidTemplate = Object.values(platformCommissionTemplates).some((value) => value < 0 || value > 100);
+    if (invalidTemplate) {
+      alert('Platform komisyonları 0 ile 100 arasında olmalıdır');
+      return;
+    }
+
     try {
       setSettingsSaving(true);
       const { settings } = await adminService.updateSystemSettings({
-        courierAutoBusyAfterOrders: autoBusyAfterOrders
+        courierAutoBusyAfterOrders: autoBusyAfterOrders,
+        platformCommissionTemplates
       });
       setSystemSettings(settings);
+      setPlatformCommissionTemplates(settings.platformCommissionTemplates ?? defaultPlatformCommissionTemplates);
       alert('Ayarlar kaydedildi');
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ayarlar kaydedilemedi';
@@ -795,7 +828,36 @@ export default function AdminDashboard() {
                   {settingsSaving ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
               </div>
-              {systemSettings && systemSettings.courierAutoBusyAfterOrders !== autoBusyAfterOrders && (
+              <p className="text-xs font-medium text-gray-600 mt-4 mb-2">Platform Komisyon Şablonu (%)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {(Object.keys(platformCommissionTemplates) as Array<keyof SystemSettings['platformCommissionTemplates']>).map((platformKey) => (
+                  <label key={platformKey} className="flex items-center justify-between gap-2 text-xs text-gray-700 bg-gray-50 rounded-md px-2 py-1.5">
+                    <span>{platformLabels[platformKey]}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={platformCommissionTemplates[platformKey]}
+                      onChange={(event) => {
+                        const nextValue = parseInt(event.target.value, 10);
+                        setPlatformCommissionTemplates((prev) => ({
+                          ...prev,
+                          [platformKey]: Number.isFinite(nextValue) ? nextValue : 0
+                        }));
+                      }}
+                      className="w-20 px-2 py-1 border border-gray-300 rounded-md text-xs text-right"
+                      aria-label={`${platformLabels[platformKey]} komisyon yüzdesi`}
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className="text-[11px] text-gray-500 mt-2">
+                Bu oranlar restoran baz komisyonuna eklenir. Örn: Restoran 40 + Yemeksepeti 35 = Toplam 75 TL.
+              </p>
+              {systemSettings && (
+                systemSettings.courierAutoBusyAfterOrders !== autoBusyAfterOrders ||
+                JSON.stringify(systemSettings.platformCommissionTemplates) !== JSON.stringify(platformCommissionTemplates)
+              ) && (
                 <p className="text-xs text-amber-600 mt-2">Değişiklikleri kaydedin.</p>
               )}
             </div>

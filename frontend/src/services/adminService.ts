@@ -131,7 +131,16 @@ export const adminService = {
     return response.data;
   },
 
-  updateSystemSettings: async (data: { courierAutoBusyAfterOrders: number }) => {
+  updateSystemSettings: async (data: {
+    courierAutoBusyAfterOrders: number;
+    platformCommissionTemplates: {
+      YEMEKSEPETI: number;
+      FEEDME: number;
+      GETIRYEMEK: number;
+      TRENDYOLYEMEK: number;
+      DIGER: number;
+    };
+  }) => {
     const response = await api.patch('/admin/settings', data);
     return response.data;
   }
