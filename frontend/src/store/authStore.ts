@@ -58,10 +58,6 @@ const demoUsersByEmail: Record<string, User> = {
   }
 };
 
-const isVercelRuntime = (): boolean => {
-  return window.location.hostname.endsWith('.vercel.app');
-};
-
 const isLikelyBackendUnavailable = (error: any): boolean => {
   if (!error) {
     return true;
@@ -114,7 +110,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: any) {
       const demoUser = getDemoUser(data);
 
-      if (isVercelRuntime() && demoUser && isLikelyBackendUnavailable(error)) {
+      if (demoUser && isLikelyBackendUnavailable(error)) {
         const demoToken = 'demo-token';
         localStorage.setItem('token', demoToken);
         localStorage.setItem('user', JSON.stringify(demoUser));
