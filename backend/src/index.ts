@@ -6,6 +6,7 @@ import { setupWebSocket } from './config/websocket';
 import { createApp } from './app';
 import { setIo } from './realtime';
 import { seedDemoUsers } from './utils/seedDemoUsers';
+import { isOriginAllowed } from './config/cors';
 
 dotenv.config();
 
@@ -13,7 +14,14 @@ const app = createApp();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
   }

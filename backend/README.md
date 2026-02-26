@@ -18,8 +18,10 @@ JWT_SECRET="your-super-secret-jwt-key"
 JWT_EXPIRES_IN="7d"
 PORT=5000
 NODE_ENV="development"
-CORS_ORIGIN="http://localhost:3000"
+CORS_ORIGIN="http://localhost:3000,https://your-frontend.vercel.app"
 ```
+
+`CORS_ORIGIN` birden fazla origin destekler (virgülle ayırın).
 
 ## Veritabanı
 

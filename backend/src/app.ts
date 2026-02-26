@@ -12,13 +12,21 @@ import ocrRoutes from './routes/ocr.routes';
 import marketplaceRoutes from './routes/marketplace.routes';
 import customerRoutes from './routes/customer.routes';
 import { errorHandler } from './middleware/errorHandler';
+import { isOriginAllowed } from './config/cors';
 
 export const createApp = (): Application => {
   const app: Application = express();
 
   // CORS ayarları - daha kapsamlı
   app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      if (isOriginAllowed(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Not allowed by CORS'));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],

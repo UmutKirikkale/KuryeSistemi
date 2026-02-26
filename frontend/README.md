@@ -17,6 +17,13 @@ VITE_API_URL=http://localhost:5000/api
 VITE_WS_URL=http://localhost:5000
 ```
 
+Vercel production için Environment Variables bölümünde mutlaka şu değerleri ekleyin:
+
+```env
+VITE_API_URL=https://your-backend-domain.com/api
+VITE_WS_URL=https://your-backend-domain.com
+```
+
 ## Çalıştırma
 
 ```bash
