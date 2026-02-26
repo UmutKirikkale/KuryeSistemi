@@ -127,14 +127,39 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
 
     try {
       const payableAmount = parseFloat(invoiceSummary.payable) || parseFloat(formData.orderAmount) || 0;
+
+      if (!Number.isFinite(payableAmount) || payableAmount <= 0) {
+        alert('❌ Sipariş oluşturulamadı: Sipariş tutarı 0’dan büyük olmalıdır.');
+        return;
+      }
+
+      if (!formData.customerName.trim() || !formData.customerPhone.trim()) {
+        alert('❌ Sipariş oluşturulamadı: Müşteri adı ve telefonu zorunludur.');
+        return;
+      }
+
+      if (!formData.pickupAddress.trim() || !formData.deliveryAddress.trim()) {
+        alert('❌ Sipariş oluşturulamadı: Alış ve teslimat adresleri zorunludur.');
+        return;
+      }
+
       await createOrder({
         ...formData,
+        pickupAddress: formData.pickupAddress.trim(),
+        deliveryAddress: formData.deliveryAddress.trim(),
+        customerName: formData.customerName.trim(),
+        customerPhone: formData.customerPhone.trim(),
+        notes: formData.notes.trim() || undefined,
         orderAmount: payableAmount
       });
       alert('✅ Sipariş başarıyla oluşturuldu!');
       onSuccess();
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Bilinmeyen hata';
+    } catch (error: any) {
+      const zodMessage = Array.isArray(error?.response?.data?.error)
+        ? error.response.data.error[0]?.message
+        : undefined;
+      const apiMessage = error?.response?.data?.error;
+      const errorMsg = zodMessage || apiMessage || error?.message || 'Bilinmeyen hata';
       alert('❌ Sipariş oluşturulamadı: ' + errorMsg);
     }
   };

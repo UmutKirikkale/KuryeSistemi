@@ -36,6 +36,22 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
 
     const sourcePlatform = formData.sourcePlatform.trim();
     const externalOrderId = formData.externalOrderId.trim();
+    const orderAmount = parseFloat(formData.orderAmount);
+
+    if (!Number.isFinite(orderAmount) || orderAmount <= 0) {
+      alert('Sipariş tutarı 0’dan büyük bir sayı olmalıdır.');
+      return;
+    }
+
+    if (!formData.customerName.trim() || !formData.customerPhone.trim()) {
+      alert('Müşteri adı ve telefonu zorunludur.');
+      return;
+    }
+
+    if (!formData.pickupAddress.trim() || !formData.deliveryAddress.trim()) {
+      alert('Alış ve teslimat adresleri zorunludur.');
+      return;
+    }
 
     if ((sourcePlatform && !externalOrderId) || (!sourcePlatform && externalOrderId)) {
       alert('Platform siparişi için platform adı ve platform sipariş numarası birlikte girilmelidir.');
@@ -47,10 +63,17 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
         ...formData,
         sourcePlatform: sourcePlatform || undefined,
         externalOrderId: externalOrderId || undefined,
-        orderAmount: parseFloat(formData.orderAmount)
+        notes: formData.notes.trim() || undefined,
+        orderAmount
       });
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
+      const zodMessage = Array.isArray(error?.response?.data?.error)
+        ? error.response.data.error[0]?.message
+        : undefined;
+      const apiMessage = error?.response?.data?.error;
+      const message = zodMessage || apiMessage || error?.message || 'Sipariş oluşturulamadı';
+      alert(`❌ Sipariş oluşturulamadı: ${message}`);
       console.error('Failed to create order:', error);
     }
   };
