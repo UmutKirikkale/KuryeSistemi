@@ -15,7 +15,17 @@ const createOrderSchema = z.object({
   orderAmount: z.number().positive(),
   customerName: z.string(),
   customerPhone: z.string(),
+  sourcePlatform: z.string().trim().min(2).max(50).optional(),
+  externalOrderId: z.string().trim().min(2).max(100).optional(),
   notes: z.string().optional()
+}).superRefine((data, ctx) => {
+  if ((data.sourcePlatform && !data.externalOrderId) || (!data.sourcePlatform && data.externalOrderId)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['externalOrderId'],
+      message: 'Platform siparişi için platform adı ve platform sipariş numarası birlikte girilmelidir'
+    });
+  }
 });
 
 const updateOrderStatusSchema = z.object({
@@ -119,6 +129,31 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     // Sipariş numarası oluştur
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
+    const sourcePlatform = validatedData.sourcePlatform?.trim();
+    const externalOrderId = validatedData.externalOrderId?.trim();
+
+    if (sourcePlatform && externalOrderId) {
+      const existingOrder = await prisma.order.findFirst({
+        where: {
+          restaurantId: restaurant.id,
+          sourcePlatform,
+          externalOrderId
+        },
+        select: {
+          id: true,
+          orderNumber: true,
+          status: true
+        }
+      });
+
+      if (existingOrder) {
+        throw new AppError(
+          `Bu platform siparişi zaten aktarılmış (Sipariş No: ${existingOrder.orderNumber})`,
+          409
+        );
+      }
+    }
+
     // Kurye ücreti artık kullanılmıyor (sadece commission kullanıyoruz)
     const courierFee = 0;
 
@@ -131,6 +166,8 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
         orderNumber,
         restaurantId: restaurant.id,
         ...validatedData,
+        sourcePlatform,
+        externalOrderId,
         courierFee,
         commissionAmount,
         status: 'PENDING'

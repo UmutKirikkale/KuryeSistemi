@@ -19,14 +19,27 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
     orderAmount: '',
     customerName: '',
     customerPhone: '',
+    sourcePlatform: '',
+    externalOrderId: '',
     notes: ''
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const sourcePlatform = formData.sourcePlatform.trim();
+    const externalOrderId = formData.externalOrderId.trim();
+
+    if ((sourcePlatform && !externalOrderId) || (!sourcePlatform && externalOrderId)) {
+      alert('Platform siparişi için platform adı ve platform sipariş numarası birlikte girilmelidir.');
+      return;
+    }
+
     try {
       await createOrder({
         ...formData,
+        sourcePlatform: sourcePlatform || undefined,
+        externalOrderId: externalOrderId || undefined,
         orderAmount: parseFloat(formData.orderAmount)
       });
       onSuccess();
@@ -154,6 +167,43 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="customerName" className="label">Müşteri Adı</label>
+
+            {/* Platform Integration Info */}
+            <div>
+              <h3 className="font-semibold text-lg mb-3">Platform Siparişi (Opsiyonel)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="sourcePlatform" className="label">Platform</label>
+                  <select
+                    id="sourcePlatform"
+                    className="input"
+                    value={formData.sourcePlatform}
+                    onChange={(e) => setFormData({ ...formData, sourcePlatform: e.target.value })}
+                  >
+                    <option value="">Seçiniz</option>
+                    <option value="YEMEKSEPETI">Yemeksepeti</option>
+                    <option value="FEEDME">FeedMe</option>
+                    <option value="GETIRYEMEK">GetirYemek</option>
+                    <option value="TRENDYOLYEMEK">TrendyolYemek</option>
+                    <option value="DIGER">Diğer</option>
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="externalOrderId" className="label">Platform Sipariş Numarası</label>
+                  <input
+                    id="externalOrderId"
+                    type="text"
+                    className="input"
+                    value={formData.externalOrderId}
+                    onChange={(e) => setFormData({ ...formData, externalOrderId: e.target.value })}
+                    placeholder="Örn: YS-123456"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Aynı platform sipariş numarası ikinci kez girilirse sistem otomatik engeller.
+              </p>
+            </div>
                 <input
                   id="customerName"
                   type="text"

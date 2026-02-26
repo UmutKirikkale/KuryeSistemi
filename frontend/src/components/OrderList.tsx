@@ -25,6 +25,8 @@ interface Order {
   courierFee: number;
   commissionAmount: number;
   customerName: string;
+  sourcePlatform?: string;
+  externalOrderId?: string;
   paymentMethod?: 'CASH' | 'CARD';
   courier?: {
     name: string;
@@ -167,7 +169,15 @@ export default function OrderList({ orders, role }: OrderListProps) {
                 <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[order.status]}`}>
                   {statusLabels[order.status]}
                 </span>
+                {order.sourcePlatform && (
+                  <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700">
+                    {order.sourcePlatform}
+                  </span>
+                )}
               </div>
+              {order.externalOrderId && (
+                <p className="text-xs text-indigo-700">Platform Sipariş No: {order.externalOrderId}</p>
+              )}
               <p className="text-sm text-gray-600">
                 {new Date(order.createdAt).toLocaleString('tr-TR')}
               </p>

@@ -11,6 +11,8 @@ export interface CreateOrderData {
   courierFee?: number;
   customerName: string;
   customerPhone: string;
+  sourcePlatform?: string;
+  externalOrderId?: string;
   notes?: string;
 }
 

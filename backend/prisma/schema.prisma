@@ -253,6 +253,8 @@ model Order {
   
   customerName     String
   customerPhone    String
+  sourcePlatform   String?
+  externalOrderId  String?
   paymentMethod    PaymentMethod?
   notes            String?
   cancelReason     String?
@@ -272,6 +274,9 @@ model Order {
   courier   User?   @relation("CourierOrders", fields: [courierId], references: [id])
 
   financialTransactions FinancialTransaction[]
+
+  @@index([sourcePlatform, externalOrderId])
+  @@unique([restaurantId, sourcePlatform, externalOrderId], map: "orders_restaurant_source_external_key")
 
   @@map("orders")
 }
