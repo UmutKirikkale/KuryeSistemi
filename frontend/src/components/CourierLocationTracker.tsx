@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocationStore } from '../store/locationStore';
 import { wsService } from '../services/websocket';
+import { locationService } from '../services/locationService';
 import { Navigation, MapPin } from 'lucide-react';
 
 export default function CourierLocationTracker() {
@@ -34,6 +35,13 @@ export default function CourierLocationTracker() {
         } catch (error) {
           console.error('Failed to update location:', error);
         }
+
+        // REST fallback ile de sunucuya gönder
+        locationService
+          .updateLocation(latitude, longitude, accuracy)
+          .catch((error) => {
+            console.error('Failed to update location via API:', error);
+          });
       },
       (error) => {
         console.error('Geolocation error:', error);

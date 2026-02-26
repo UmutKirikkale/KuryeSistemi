@@ -68,7 +68,6 @@ export const getCourierLocations = async (req: AuthRequest, res: Response) => {
 
     const couriers = await prisma.courierProfile.findMany({
       where: {
-        isAvailable: true,
         currentLatitude: { not: null },
         currentLongitude: { not: null }
       },
@@ -89,6 +88,7 @@ export const getCourierLocations = async (req: AuthRequest, res: Response) => {
       latitude: courier.currentLatitude,
       longitude: courier.currentLongitude,
       vehicleType: courier.vehicleType,
+      isAvailable: courier.isAvailable,
       lastUpdate: courier.lastLocationUpdate
     }));
 
