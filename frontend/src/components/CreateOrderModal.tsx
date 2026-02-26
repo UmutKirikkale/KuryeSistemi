@@ -9,6 +9,13 @@ interface CreateOrderModalProps {
 
 export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModalProps) {
   const { createOrder, isLoading } = useOrderStore();
+  const platformCommissionHints: Record<string, number> = {
+    YEMEKSEPETI: 35,
+    FEEDME: 25,
+    GETIRYEMEK: 30,
+    TRENDYOLYEMEK: 30,
+    DIGER: 20
+  };
   const [formData, setFormData] = useState({
     pickupAddress: '',
     deliveryAddress: '',
@@ -203,6 +210,11 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
               <p className="text-xs text-gray-500 mt-1">
                 Aynı platform sipariş numarası ikinci kez girilirse sistem otomatik engeller.
               </p>
+              {formData.sourcePlatform && (
+                <p className="text-xs text-indigo-700 mt-1">
+                  Bu platform için ekstra komisyon şablonu: +{platformCommissionHints[formData.sourcePlatform] || 0} ₺
+                </p>
+              )}
             </div>
                 <input
                   id="customerName"

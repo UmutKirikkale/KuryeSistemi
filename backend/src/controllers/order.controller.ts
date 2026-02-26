@@ -5,6 +5,22 @@ import { prisma } from '../config/database';
 import { AppError } from '../middleware/errorHandler';
 import { emitEvent } from '../realtime';
 
+const platformSchema = z.enum([
+  'YEMEKSEPETI',
+  'FEEDME',
+  'GETIRYEMEK',
+  'TRENDYOLYEMEK',
+  'DIGER'
+]);
+
+const platformCommissionExtras: Record<z.infer<typeof platformSchema>, number> = {
+  YEMEKSEPETI: 35,
+  FEEDME: 25,
+  GETIRYEMEK: 30,
+  TRENDYOLYEMEK: 30,
+  DIGER: 20
+};
+
 const createOrderSchema = z.object({
   pickupAddress: z.string(),
   deliveryAddress: z.string(),
@@ -15,7 +31,7 @@ const createOrderSchema = z.object({
   orderAmount: z.number().positive(),
   customerName: z.string(),
   customerPhone: z.string(),
-  sourcePlatform: z.string().trim().min(2).max(50).optional(),
+  sourcePlatform: platformSchema.optional(),
   externalOrderId: z.string().trim().min(2).max(100).optional(),
   notes: z.string().optional()
 }).superRefine((data, ctx) => {
@@ -129,7 +145,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     // Sipariş numarası oluştur
     const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    const sourcePlatform = validatedData.sourcePlatform?.trim();
+    const sourcePlatform = validatedData.sourcePlatform;
     const externalOrderId = validatedData.externalOrderId?.trim();
 
     if (sourcePlatform && externalOrderId) {
@@ -157,8 +173,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
     // Kurye ücreti artık kullanılmıyor (sadece commission kullanıyoruz)
     const courierFee = 0;
 
-    // Komisyon hesapla (sabit tutar)
-    const commissionAmount = restaurant.commissionPerOrder;
+    // Komisyon hesapla (restoran komisyonu + platform şablonu)
+    const platformExtraCommission = sourcePlatform
+      ? (platformCommissionExtras[sourcePlatform] || 0)
+      : 0;
+    const commissionAmount = restaurant.commissionPerOrder + platformExtraCommission;
 
     // Siparişi oluştur
     const order = await prisma.order.create({
