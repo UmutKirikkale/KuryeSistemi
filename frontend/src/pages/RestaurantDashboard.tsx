@@ -329,9 +329,9 @@ export default function RestaurantDashboard() {
           <div className="card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Komisyon Oranı</p>
+                <p className="text-sm text-gray-600">Toplam Komisyon</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {financialData?.summary.commissionPerOrder?.toFixed(2) || '0.00'} ₺
+                  {financialData?.summary.totalCommissions?.toFixed(2) || '0.00'} ₺
                 </p>
               </div>
               <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">

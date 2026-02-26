@@ -17,9 +17,9 @@ export default function FinancialSummary({ data }: { data: any }) {
         </div>
 
         <div className="p-4 bg-red-50 rounded-lg border border-red-200">
-          <p className="text-sm text-red-700 mb-1">Komisyon Oranı</p>
+          <p className="text-sm text-red-700 mb-1">Toplam Komisyon</p>
           <p className="text-2xl font-bold text-red-900">
-            {summary.commissionPerOrder?.toFixed(2) || '0.00'} ₺
+            {summary.totalCommissions.toFixed(2)} ₺
           </p>
         </div>
 
