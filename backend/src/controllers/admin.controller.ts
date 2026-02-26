@@ -34,9 +34,17 @@ const normalizePlatformCommissionTemplates = (input: unknown): Record<PlatformKe
 };
 
 const hasMissingPlatformTemplateColumnError = (error: unknown) => {
-  const prismaError = error as { code?: string; meta?: { column_name?: string; column?: string } };
+  const prismaError = error as {
+    code?: string;
+    message?: string;
+    meta?: { column_name?: string; column?: string };
+  };
   const missingColumn = String(prismaError?.meta?.column_name || prismaError?.meta?.column || '');
-  return prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates');
+  const errorMessage = String(prismaError?.message || '');
+  return (
+    (prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates')) ||
+    errorMessage.includes('platformCommissionTemplates')
+  );
 };
 
 const systemSettingsSchema = z.object({

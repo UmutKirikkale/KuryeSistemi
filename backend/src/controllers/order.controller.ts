@@ -92,9 +92,17 @@ const isTransitionAllowed = (
 };
 
 const hasMissingPlatformTemplateColumnError = (error: unknown) => {
-  const prismaError = error as { code?: string; meta?: { column_name?: string; column?: string } };
+  const prismaError = error as {
+    code?: string;
+    message?: string;
+    meta?: { column_name?: string; column?: string };
+  };
   const missingColumn = String(prismaError?.meta?.column_name || prismaError?.meta?.column || '');
-  return prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates');
+  const errorMessage = String(prismaError?.message || '');
+  return (
+    (prismaError?.code === 'P2022' && missingColumn.includes('platformCommissionTemplates')) ||
+    errorMessage.includes('platformCommissionTemplates')
+  );
 };
 
 const getSystemSettings = async () => {
@@ -222,11 +230,11 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
 
     // Kurye ücreti artık kullanılmıyor (sadece commission kullanıyoruz)
     const courierFee = 0;
-    const systemSettings = await getSystemSettings();
+    const systemSettings = sourcePlatform ? await getSystemSettings() : null;
 
     // Komisyon hesapla (restoran komisyonu + platform şablonu)
     const platformExtraCommission = sourcePlatform
-      ? (systemSettings.platformCommissionTemplates[sourcePlatform] || 0)
+      ? (systemSettings?.platformCommissionTemplates[sourcePlatform] || 0)
       : 0;
     const commissionAmount = restaurant.commissionPerOrder + platformExtraCommission;
 
