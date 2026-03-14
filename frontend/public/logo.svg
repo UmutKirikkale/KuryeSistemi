@@ -1,0 +1,9 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" rx="0" fill="#63B8E6"/>
+
+  <!-- Black MJ stroke -->
+  <path d="M220 210V610C220 663 241 714 277 751L315 790V423L477 596L804 390V300L477 506L220 210Z" fill="#050505"/>
+
+  <!-- White J stroke -->
+  <path d="M563 612H681C708 612 730 590 730 563V425L808 377V604C808 684 743 749 663 749H468V529L563 474V612Z" fill="#EDEDED"/>
+</svg>
