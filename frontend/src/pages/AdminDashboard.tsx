@@ -265,6 +265,7 @@ export default function AdminDashboard() {
   const [autoBusyAfterOrders, setAutoBusyAfterOrders] = useState<number>(4);
   const [platformCommissionTemplates, setPlatformCommissionTemplates] = useState<SystemSettings['platformCommissionTemplates']>(defaultPlatformCommissionTemplates);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [resettingData, setResettingData] = useState(false);
   const [courierForm, setCourierForm] = useState({
     email: '',
     password: '',
@@ -369,6 +370,37 @@ export default function AdminDashboard() {
       alert(message);
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleResetAllData = async () => {
+    const approved = window.confirm('Tum siparis, restoran, kurye, musteri ve finansal veriler silinecek. Devam edilsin mi?');
+    if (!approved) {
+      return;
+    }
+
+    const confirmationText = window.prompt('Onaylamak icin SIFIRLA yazin');
+    if (confirmationText !== 'SIFIRLA') {
+      alert('Islem iptal edildi. Dogrulama metni hatali.');
+      return;
+    }
+
+    try {
+      setResettingData(true);
+      const response = await adminService.resetAllData();
+      alert(response?.message || 'Tum veriler sifirlandi');
+      await fetchDashboardData();
+      await fetchSystemSettings();
+      setRecentUsers([]);
+      setRecentOrders([]);
+      setCouriers([]);
+      setRestaurants([]);
+      setFinancialReport(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Veri sifirlama basarisiz oldu';
+      alert(message);
+    } finally {
+      setResettingData(false);
     }
   };
 
@@ -689,12 +721,21 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-600">Hoş geldiniz, {user?.name}</p>
               </div>
             </div>
-            <button
-              onClick={logout}
-              className="btn btn-secondary"
-            >
-              Çıkış Yap
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleResetAllData}
+                disabled={resettingData}
+                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {resettingData ? 'Sifirlaniyor...' : 'Tum Verileri Sifirla'}
+              </button>
+              <button
+                onClick={logout}
+                className="btn btn-secondary"
+              >
+                Çıkış Yap
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -11,8 +11,10 @@ import {
   TextInput,
   View
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { orderService, CreateOrderData } from '../../services/orderService';
 import { restaurantService } from '../../services/restaurantService';
+import { ocrService } from '../../services/ocrService';
 
 type FormState = {
   customerName: string;
@@ -31,6 +33,12 @@ export default function RestaurantCreateOrderScreen() {
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [ocrLoading, setOcrLoading] = useState(false);
+  const [ocrSummary, setOcrSummary] = useState<{
+    confidence: number;
+    quality?: 'LOW' | 'MEDIUM' | 'HIGH';
+    missingFields?: string[];
+  } | null>(null);
   const [restaurantProfile, setRestaurantProfile] = useState<{
     address: string;
     latitude?: number | null;
@@ -52,6 +60,61 @@ export default function RestaurantCreateOrderScreen() {
 
   const set = (key: keyof FormState) => (val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
+
+  const handleOCRFromImage = async () => {
+    try {
+      const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Izin Gerekli', 'OCR icin galeriden foto secme izni gerekli.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1
+      });
+
+      if (result.canceled || !result.assets?.length) {
+        return;
+      }
+
+      const image = result.assets[0];
+      setOcrLoading(true);
+
+      const response = await ocrService.extractOrderFromImage(
+        image.uri,
+        image.fileName || undefined,
+        image.mimeType || undefined
+      );
+
+      const orderAmount =
+        response.suggestions.payableAmount ||
+        response.suggestions.orderAmount ||
+        0;
+
+      setForm((prev) => ({
+        ...prev,
+        customerName: response.suggestions.customerName || prev.customerName,
+        customerPhone: response.suggestions.customerPhone || prev.customerPhone,
+        deliveryAddress: response.suggestions.deliveryAddress || prev.deliveryAddress,
+        orderAmount: orderAmount > 0 ? String(orderAmount) : prev.orderAmount,
+        notes: response.suggestions.notes || prev.notes
+      }));
+
+      setOcrSummary({
+        confidence: response.suggestions.confidence || response.data.confidence,
+        quality: response.suggestions.quality || response.data.quality,
+        missingFields: response.suggestions.missingFields || response.data.missingFields
+      });
+
+      Alert.alert('Basarili', 'Foto analiz edildi. Alanlari kontrol edip kaydedin.');
+    } catch (e: any) {
+      Alert.alert('OCR Hatasi', e?.response?.data?.error || e?.message || 'Foto islenemedi');
+    } finally {
+      setOcrLoading(false);
+    }
+  };
 
   const handleCreate = async () => {
     if (!form.customerName || !form.deliveryAddress || !form.orderAmount) {
@@ -100,6 +163,27 @@ export default function RestaurantCreateOrderScreen() {
     >
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Yeni Siparis</Text>
+
+        <View style={styles.ocrBox}>
+          <Text style={styles.ocrTitle}>Foto ile Otomatik Doldur (OCR)</Text>
+          <Text style={styles.ocrSub}>Fis veya siparis ekran goruntusu secin, form otomatik dolsun.</Text>
+          <Pressable
+            style={[styles.ocrBtn, ocrLoading && styles.btnDisabled]}
+            onPress={handleOCRFromImage}
+            disabled={ocrLoading}
+          >
+            {ocrLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.ocrBtnText}>Fotograf Sec ve Analiz Et</Text>}
+          </Pressable>
+          {!!ocrSummary && (
+            <View style={styles.ocrInfo}>
+              <Text style={styles.ocrInfoText}>Guven: %{Math.round(ocrSummary.confidence || 0)}</Text>
+              <Text style={styles.ocrInfoText}>Kalite: {ocrSummary.quality || '-'}</Text>
+              {!!ocrSummary.missingFields?.length && (
+                <Text style={styles.ocrWarn}>Eksik Alanlar: {ocrSummary.missingFields.join(', ')}</Text>
+              )}
+            </View>
+          )}
+        </View>
 
         <Text style={styles.label}>Musteri Adi *</Text>
         <TextInput
@@ -168,6 +252,14 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f1f5f9' },
   content: { padding: 16 },
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a', marginBottom: 20 },
+  ocrBox: { backgroundColor: '#eef2ff', borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: '#c7d2fe' },
+  ocrTitle: { fontSize: 14, fontWeight: '700', color: '#312e81' },
+  ocrSub: { fontSize: 12, color: '#4338ca', marginTop: 4, marginBottom: 10 },
+  ocrBtn: { backgroundColor: '#4338ca', borderRadius: 10, paddingVertical: 10, alignItems: 'center' },
+  ocrBtnText: { color: '#fff', fontWeight: '700' },
+  ocrInfo: { marginTop: 10, gap: 4 },
+  ocrInfoText: { fontSize: 12, color: '#1e1b4b' },
+  ocrWarn: { fontSize: 12, color: '#92400e' },
   label: { fontSize: 13, fontWeight: '600', color: '#475569', marginBottom: 6, marginTop: 4 },
   input: {
     backgroundColor: '#fff',

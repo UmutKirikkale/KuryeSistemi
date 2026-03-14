@@ -143,5 +143,10 @@ export const adminService = {
   }) => {
     const response = await api.patch('/admin/settings', data);
     return response.data;
+  },
+
+  resetAllData: async () => {
+    const response = await api.post('/admin/reset-all-data');
+    return response.data;
   }
 };

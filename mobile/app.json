@@ -64,6 +64,12 @@
           "locationAlwaysAndWhenInUsePermission": "Kurye teslimat sirasinda arka planda konum takibi icin izin gerekir.",
           "isAndroidBackgroundLocationEnabled": true
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Siparis fotografini secip OCR ile analiz etmek icin galeri izni gerekir."
+        }
       ]
     ],
     "extra": {

@@ -18,7 +18,8 @@ import {
   updateRestaurantCommission,
   getSystemSettings,
   updateSystemSettings,
-  getCourierSettlementClosings
+  getCourierSettlementClosings,
+  resetAllData
 } from '../controllers/admin.controller';
 
 const router = Router();
@@ -58,5 +59,8 @@ router.get('/logs', getSystemLogs);
 // Sistem ayarları
 router.get('/settings', getSystemSettings);
 router.patch('/settings', updateSystemSettings);
+
+// Sistem veri sifirlama
+router.post('/reset-all-data', resetAllData);
 
 export default router;

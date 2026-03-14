@@ -112,5 +112,10 @@ export const adminService = {
   toggleUserStatus: async (userId: string) => {
     const response = await api.patch(`/admin/users/${userId}/toggle-status`);
     return response.data;
+  },
+
+  resetAllData: async () => {
+    const response = await api.post('/admin/reset-all-data');
+    return response.data;
   }
 };

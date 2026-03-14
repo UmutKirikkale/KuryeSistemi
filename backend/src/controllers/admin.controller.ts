@@ -748,6 +748,55 @@ export const updateSystemSettings = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+// Tum operasyonel verileri sifirla (sadece admin)
+export const resetAllData = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (req.userRole !== 'ADMIN') {
+      throw new AppError('Access denied', 403);
+    }
+
+    await prisma.$transaction(async (tx: any) => {
+      // Iliski bagimliliklarina gore sirali temizlik
+      await tx.restaurantRating.deleteMany({});
+      await tx.financialTransaction.deleteMany({});
+      await tx.order.deleteMany({});
+      await tx.customerOrder.deleteMany({});
+      await tx.savedAddress.deleteMany({});
+      await tx.menuItem.deleteMany({});
+      await tx.menuCategory.deleteMany({});
+      await tx.locationHistory.deleteMany({});
+      await tx.courierAvailabilityEvent.deleteMany({});
+      await tx.courierProfile.deleteMany({});
+      await tx.restaurant.deleteMany({});
+      await tx.customer.deleteMany({});
+
+      // Admin hesaplari korunur; diger tum kullanicilar silinir
+      await tx.user.deleteMany({
+        where: {
+          role: {
+            not: 'ADMIN'
+          }
+        }
+      });
+
+      // Sistem ayarlarini varsayilana cek
+      await tx.systemSettings.deleteMany({});
+      await tx.systemSettings.create({
+        data: {
+          courierAutoBusyAfterOrders: 4,
+          platformCommissionTemplates: defaultPlatformCommissionTemplates
+        }
+      });
+    });
+
+    res.json({
+      message: 'All operational data has been reset successfully'
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Kurye oluşturma (Sadece admin)
 export const createCourier = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
