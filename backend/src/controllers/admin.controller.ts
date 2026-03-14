@@ -755,38 +755,52 @@ export const resetAllData = async (req: AuthRequest, res: Response): Promise<any
       throw new AppError('Access denied', 403);
     }
 
+    const safeDeleteMany = async (operation: () => Promise<any>, label: string) => {
+      try {
+        await operation();
+      } catch (error: any) {
+        const code = String(error?.code || '');
+        // Production schema drift tolerance: ignore non-existing table/column errors
+        if (code === 'P2021' || code === 'P2022') {
+          console.warn(`resetAllData skipped ${label}: ${code}`);
+          return;
+        }
+        throw error;
+      }
+    };
+
     await prisma.$transaction(async (tx: any) => {
       // Iliski bagimliliklarina gore sirali temizlik
-      await tx.restaurantRating.deleteMany({});
-      await tx.financialTransaction.deleteMany({});
-      await tx.order.deleteMany({});
-      await tx.customerOrder.deleteMany({});
-      await tx.savedAddress.deleteMany({});
-      await tx.menuItem.deleteMany({});
-      await tx.menuCategory.deleteMany({});
-      await tx.locationHistory.deleteMany({});
-      await tx.courierAvailabilityEvent.deleteMany({});
-      await tx.courierProfile.deleteMany({});
-      await tx.restaurant.deleteMany({});
-      await tx.customer.deleteMany({});
+      await safeDeleteMany(() => tx.restaurantRating.deleteMany({}), 'restaurantRating');
+      await safeDeleteMany(() => tx.financialTransaction.deleteMany({}), 'financialTransaction');
+      await safeDeleteMany(() => tx.order.deleteMany({}), 'order');
+      await safeDeleteMany(() => tx.customerOrder.deleteMany({}), 'customerOrder');
+      await safeDeleteMany(() => tx.savedAddress.deleteMany({}), 'savedAddress');
+      await safeDeleteMany(() => tx.menuItem.deleteMany({}), 'menuItem');
+      await safeDeleteMany(() => tx.menuCategory.deleteMany({}), 'menuCategory');
+      await safeDeleteMany(() => tx.locationHistory.deleteMany({}), 'locationHistory');
+      await safeDeleteMany(() => tx.courierAvailabilityEvent.deleteMany({}), 'courierAvailabilityEvent');
+      await safeDeleteMany(() => tx.courierProfile.deleteMany({}), 'courierProfile');
+      await safeDeleteMany(() => tx.restaurant.deleteMany({}), 'restaurant');
+      await safeDeleteMany(() => tx.customer.deleteMany({}), 'customer');
 
       // Admin hesaplari korunur; diger tum kullanicilar silinir
-      await tx.user.deleteMany({
+      await safeDeleteMany(() => tx.user.deleteMany({
         where: {
           role: {
             not: 'ADMIN'
           }
         }
-      });
+      }), 'user (non-admin)');
 
       // Sistem ayarlarini varsayilana cek
-      await tx.systemSettings.deleteMany({});
-      await tx.systemSettings.create({
+      await safeDeleteMany(() => tx.systemSettings.deleteMany({}), 'systemSettings');
+      await safeDeleteMany(() => tx.systemSettings.create({
         data: {
           courierAutoBusyAfterOrders: 4,
           platformCommissionTemplates: defaultPlatformCommissionTemplates
         }
-      });
+      }), 'systemSettings create');
     }, { timeout: 30000 });
 
     res.json({
