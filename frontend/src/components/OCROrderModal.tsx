@@ -20,7 +20,6 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
   const [lowQualityDetected, setLowQualityDetected] = useState(false);
   const [allowLowQualityProceed, setAllowLowQualityProceed] = useState(false);
   const [invoiceSummary, setInvoiceSummary] = useState({
-    subtotal: '',
     discount: '',
     payable: ''
   });
@@ -64,7 +63,7 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
     setPreviewUrl('');
     setLowQualityDetected(false);
     setAllowLowQualityProceed(false);
-    setInvoiceSummary({ subtotal: '', discount: '', payable: '' });
+    setInvoiceSummary({ discount: '', payable: '' });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -101,12 +100,10 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
       setLowQualityDetected(detectedLowQuality);
       setAllowLowQualityProceed(false);
 
-      const subtotalValue = response.suggestions.subtotalAmount || response.data.subtotalAmount || 0;
       const discountValue = response.suggestions.discountAmount || response.data.discountAmount || 0;
       const payableValue = response.suggestions.payableAmount || response.data.payableAmount || response.suggestions.orderAmount || 0;
 
       setInvoiceSummary({
-        subtotal: subtotalValue ? subtotalValue.toString() : '',
         discount: discountValue ? discountValue.toString() : '',
         payable: payableValue ? payableValue.toString() : ''
       });
@@ -443,21 +440,7 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
 
               <div className="border rounded-lg p-4 bg-gray-50">
                 <p className="text-sm font-medium text-gray-700 mb-3">Fatura Ozeti</p>
-                <div className="grid grid-cols-3 gap-4">
-                  <div>
-                    <label htmlFor="invoiceSubtotal" className="block text-xs font-medium text-gray-600 mb-1">
-                      Ara Toplam
-                    </label>
-                    <input
-                      id="invoiceSubtotal"
-                      type="number"
-                      step="0.01"
-                      value={invoiceSummary.subtotal}
-                      onChange={(e) => setInvoiceSummary({ ...invoiceSummary, subtotal: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                      placeholder="0.00"
-                    />
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label htmlFor="invoiceDiscount" className="block text-xs font-medium text-gray-600 mb-1">
                       Indirim

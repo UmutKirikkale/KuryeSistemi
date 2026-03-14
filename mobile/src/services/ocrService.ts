@@ -6,7 +6,6 @@ export interface ExtractedOrderData {
   deliveryAddress?: string;
   pickupAddress?: string;
   orderAmount?: number;
-  subtotalAmount?: number;
   discountAmount?: number;
   payableAmount?: number;
   items?: string[];
@@ -26,7 +25,6 @@ export interface OCRResponse {
     deliveryAddress: string;
     pickupAddress: string;
     orderAmount: number;
-    subtotalAmount?: number;
     discountAmount?: number;
     payableAmount?: number;
     items: string[];

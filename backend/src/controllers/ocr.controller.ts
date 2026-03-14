@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { AppError } from '../middleware/errorHandler';
 import { ocrService } from '../services/ocr.service';
+import { prisma } from '../config/database';
 
 export const extractOrderFromImage = async (req: AuthRequest, res: Response): Promise<any> => {
   try {
@@ -20,6 +21,13 @@ export const extractOrderFromImage = async (req: AuthRequest, res: Response): Pr
     // OCR ile sipariş bilgilerini çıkar
     const extractedData = await ocrService.processOrderImage(req.file.path);
 
+    const restaurant = await prisma.restaurant.findFirst({
+      where: { userId: req.userId },
+      select: { name: true, address: true }
+    });
+
+    const autoPickupAddress = restaurant?.name || restaurant?.address || extractedData.pickupAddress || '';
+
     res.json({
       message: 'Order data extracted successfully',
       data: extractedData,
@@ -27,9 +35,8 @@ export const extractOrderFromImage = async (req: AuthRequest, res: Response): Pr
         customerName: extractedData.customerName || '',
         customerPhone: extractedData.customerPhone || '',
         deliveryAddress: extractedData.deliveryAddress || '',
-        pickupAddress: extractedData.pickupAddress || '',
+        pickupAddress: autoPickupAddress,
         orderAmount: extractedData.orderAmount || 0,
-        subtotalAmount: extractedData.subtotalAmount || 0,
         discountAmount: extractedData.discountAmount || 0,
         payableAmount: extractedData.payableAmount || extractedData.orderAmount || 0,
         items: extractedData.items || [],

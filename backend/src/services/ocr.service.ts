@@ -93,6 +93,28 @@ export class OCRService {
     return parseFloat(cleaned);
   }
 
+  private hasPhone(value: string): boolean {
+    return /(?:\+?90\s*)?(?:\(?0?5\d{2}\)?[\s-]*\d{3}[\s-]*\d{2}[\s-]*\d{2})/.test(value);
+  }
+
+  private hasTime(value: string): boolean {
+    return /\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b/.test(value) || /\b(?:saat|teslim\s*saati)\b/i.test(value);
+  }
+
+  private isAddressLike(value: string): boolean {
+    return /(mahalle|mah\.|sokak|sk\.|cadde|cd\.|bulvar|blv\.|apartman|apt\.|site|blok|daire|no\s*:?)/i.test(value);
+  }
+
+  private sanitizeDeliveryAddress(value: string): string {
+    return value
+      .replace(/(?:\+?90\s*)?(?:\(?0?5\d{2}\)?[\s-]*\d{3}[\s-]*\d{2}[\s-]*\d{2})/g, ' ')
+      .replace(/\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b/g, ' ')
+      .replace(/\b(?:saat|teslim\s*saati)\b/gi, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/[,-]\s*$/, '')
+      .trim();
+  }
+
   private extractAmountFromLine(line: string): number | null {
     const hasCurrency = /(?:₺|tl|lira)/i.test(line);
     const matches = Array.from(line.matchAll(/[\d.,]+/g));
@@ -138,12 +160,20 @@ export class OCRService {
               .trim();
           }
         }
-        if (inline && !/\d/.test(inline) && inline.length >= 4) {
+        if (inline && !/\d/.test(inline) && inline.length >= 4 && !this.isAddressLike(inline) && !this.hasPhone(inline) && !this.hasTime(inline)) {
           return inline.replace(/\s+/g, ' ').trim();
         }
 
         const nextLine = lines[i + 1]?.trim();
-        if (nextLine && !/\d/.test(nextLine) && nextLine.length >= 4 && nextLine.length <= 45) {
+        if (
+          nextLine &&
+          !/\d/.test(nextLine) &&
+          nextLine.length >= 4 &&
+          nextLine.length <= 45 &&
+          !this.isAddressLike(nextLine) &&
+          !this.hasPhone(nextLine) &&
+          !this.hasTime(nextLine)
+        ) {
           return nextLine.replace(/\s+/g, ' ').trim();
         }
       }
@@ -152,12 +182,27 @@ export class OCRService {
       if (!match) continue;
 
       const currentLineValue = (match[1] || '').trim();
-      if (currentLineValue && !/\d/.test(currentLineValue) && currentLineValue.length >= 4) {
+      if (
+        currentLineValue &&
+        !/\d/.test(currentLineValue) &&
+        currentLineValue.length >= 4 &&
+        !this.isAddressLike(currentLineValue) &&
+        !this.hasPhone(currentLineValue) &&
+        !this.hasTime(currentLineValue)
+      ) {
         return currentLineValue.replace(/\s+/g, ' ').trim();
       }
 
       const next = lines[i + 1]?.trim();
-      if (next && !/\d/.test(next) && next.length >= 4 && next.length <= 45) {
+      if (
+        next &&
+        !/\d/.test(next) &&
+        next.length >= 4 &&
+        next.length <= 45 &&
+        !this.isAddressLike(next) &&
+        !this.hasPhone(next) &&
+        !this.hasTime(next)
+      ) {
         return next.replace(/\s+/g, ' ').trim();
       }
     }
@@ -165,6 +210,7 @@ export class OCRService {
     const fullNameLine = lines.find((line) => {
       if (line.length < 4 || line.length > 45) return false;
       if (/\d/.test(line)) return false;
+      if (this.isAddressLike(line) || this.hasPhone(line) || this.hasTime(line)) return false;
       const lower = line.toLowerCase();
       if (this.stopWords.some((word) => lower.includes(word))) return false;
       return /^[a-zA-ZğüşıöçĞÜŞİÖÇ]+\s+[a-zA-ZğüşıöçĞÜŞİÖÇ]+/.test(line);
@@ -191,14 +237,19 @@ export class OCRService {
         if (!next) break;
         const lower = next.toLowerCase();
         const itemLikeLine = /(?:\b\d+\s*x\b|\bx\s*\d+|[a-zA-ZğüşıöçĞÜŞİÖÇ]{2,}\s*\d{2,}[.,]?\d*)/i.test(next);
+        const hasPhoneOrTime = this.hasPhone(next) || this.hasTime(next);
         if (this.stopWords.some((word) => lower.includes(word))) break;
         if (/\d+[.,]?\d*\s*(₺|tl)/i.test(next)) break;
+        if (hasPhoneOrTime) break;
         if (itemLikeLine) break;
         chunks.push(next);
       }
 
       if (chunks.length > 0) {
-        return chunks.join(' ').replace(/\s{2,}/g, ' ').trim();
+        const cleaned = this.sanitizeDeliveryAddress(chunks.join(' ').replace(/\s{2,}/g, ' ').trim());
+        if (cleaned.length >= 6) {
+          return cleaned;
+        }
       }
     }
 
@@ -210,7 +261,8 @@ export class OCRService {
     }
 
     const inlineAddress = text.match(/[^\n]{0,24}(?:mahalle|mah\.|sokak|sk\.|cadde|cd\.|apartman|apt\.|site|blok|daire|no\s*:?)\s*[^\n]{8,}/i);
-    return inlineAddress?.[0]?.trim();
+    const cleanedInline = inlineAddress?.[0] ? this.sanitizeDeliveryAddress(inlineAddress[0].trim()) : undefined;
+    return cleanedInline;
   }
 
   private calculateQuality(confidence: number, missingCount: number): 'LOW' | 'MEDIUM' | 'HIGH' {
@@ -310,6 +362,10 @@ export class OCRService {
     }
 
     orderData.deliveryAddress = this.extractAddress(normalizedText, lines);
+    if (orderData.deliveryAddress) {
+      const cleanedDelivery = this.sanitizeDeliveryAddress(orderData.deliveryAddress);
+      orderData.deliveryAddress = cleanedDelivery || orderData.deliveryAddress;
+    }
 
     const totalCandidates: Array<{ amount: number; label: string }> = [];
     const payableKeywords = ['indirimli', 'odenecek', 'tahsil', 'net', 'fatura', 'fis', 'fiş', 'odeme'];
