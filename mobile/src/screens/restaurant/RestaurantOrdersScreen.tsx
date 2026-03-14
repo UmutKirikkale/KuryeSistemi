@@ -147,6 +147,21 @@ export default function RestaurantOrdersScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, { backgroundColor: '#eff6ff' }]}>
+          <Text style={styles.summaryLabel}>Toplam Siparis</Text>
+          <Text style={[styles.summaryValue, { color: '#1d4ed8' }]}>{orders.length}</Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: '#fff7ed' }]}>
+          <Text style={styles.summaryLabel}>Aktif</Text>
+          <Text style={[styles.summaryValue, { color: '#ea580c' }]}>{orders.filter((o) => ['PENDING', 'APPROVED', 'PREPARING', 'ASSIGNED', 'PICKED_UP'].includes(o.status)).length}</Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: '#ecfdf5' }]}>
+          <Text style={styles.summaryLabel}>Teslim Edildi</Text>
+          <Text style={[styles.summaryValue, { color: '#16a34a' }]}>{orders.filter((o) => o.status === 'DELIVERED').length}</Text>
+        </View>
+      </View>
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#1d4ed8" />
       ) : (
@@ -179,6 +194,10 @@ const styles = StyleSheet.create({
   sub: { fontSize: 12, color: '#64748b', marginTop: 2 },
   logoutBtn: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   logoutText: { color: '#475569', fontSize: 13 },
+  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 12 },
+  summaryCard: { width: '31%', borderRadius: 12, padding: 12 },
+  summaryLabel: { fontSize: 11, color: '#64748b' },
+  summaryValue: { fontSize: 18, fontWeight: '700', marginTop: 4 },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

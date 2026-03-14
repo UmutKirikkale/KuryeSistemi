@@ -8,8 +8,9 @@ interface AuthState {
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  isHydrated: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
 }
@@ -22,6 +23,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   token: null,
   isAuthenticated: false,
   isLoading: false,
+  isHydrated: false,
   error: null,
 
   login: async (email, password) => {
@@ -38,8 +40,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         token: response.token,
         isAuthenticated: true,
         isLoading: false,
+        isHydrated: true,
         error: null
       });
+
+      return response.user;
     } catch (error: any) {
       set({
         isLoading: false,
@@ -50,16 +55,21 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await AsyncStorage.removeItem(TOKEN_KEY);
-    await AsyncStorage.removeItem(USER_KEY);
     delete api.defaults.headers.common.Authorization;
 
     set({
       user: null,
       token: null,
       isAuthenticated: false,
+      isHydrated: true,
       error: null
     });
+
+    try {
+      await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    } catch {
+      // State was already cleared; storage cleanup can fail silently.
+    }
   },
 
   hydrate: async () => {
@@ -69,6 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     ]);
 
     if (!token || !userStr) {
+      set({ isHydrated: true });
       return;
     }
 
@@ -78,11 +89,13 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({
         user,
         token,
-        isAuthenticated: true
+        isAuthenticated: true,
+        isHydrated: true
       });
     } catch {
       await AsyncStorage.removeItem(TOKEN_KEY);
       await AsyncStorage.removeItem(USER_KEY);
+      set({ isHydrated: true });
     }
   }
 }));

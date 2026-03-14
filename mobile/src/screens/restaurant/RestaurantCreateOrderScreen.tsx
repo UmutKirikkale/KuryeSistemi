@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -12,6 +12,7 @@ import {
   View
 } from 'react-native';
 import { orderService, CreateOrderData } from '../../services/orderService';
+import { restaurantService } from '../../services/restaurantService';
 
 type FormState = {
   customerName: string;
@@ -30,6 +31,24 @@ export default function RestaurantCreateOrderScreen() {
     notes: ''
   });
   const [loading, setLoading] = useState(false);
+  const [restaurantProfile, setRestaurantProfile] = useState<{
+    address: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null>(null);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await restaurantService.getProfile();
+        setRestaurantProfile(res.restaurant);
+      } catch {
+        setRestaurantProfile(null);
+      }
+    };
+
+    loadProfile();
+  }, []);
 
   const set = (key: keyof FormState) => (val: string) =>
     setForm((prev) => ({ ...prev, [key]: val }));
@@ -48,12 +67,16 @@ export default function RestaurantCreateOrderScreen() {
     setLoading(true);
     try {
       const payload: CreateOrderData = {
+        pickupAddress: restaurantProfile?.address || 'Restoran',
         customerName: form.customerName.trim(),
-        customerPhone: form.customerPhone.trim() || undefined,
+        customerPhone: form.customerPhone.trim() || '-',
         deliveryAddress: form.deliveryAddress.trim(),
+        pickupLatitude: restaurantProfile?.latitude ?? 0,
+        pickupLongitude: restaurantProfile?.longitude ?? 0,
+        deliveryLatitude: restaurantProfile?.latitude ?? 0,
+        deliveryLongitude: restaurantProfile?.longitude ?? 0,
         orderAmount: amount,
-        notes: form.notes.trim() || undefined,
-        paymentMethod: 'CASH'
+        notes: form.notes.trim() || undefined
       };
       await orderService.createOrder(payload);
       Alert.alert('Basarili', 'Siparis olusturuldu', [

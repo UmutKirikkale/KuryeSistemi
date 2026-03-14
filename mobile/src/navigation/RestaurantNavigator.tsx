@@ -5,6 +5,8 @@ import { RestaurantTabParamList } from './types';
 import RestaurantOrdersScreen from '../screens/restaurant/RestaurantOrdersScreen';
 import RestaurantCreateOrderScreen from '../screens/restaurant/RestaurantCreateOrderScreen';
 import RestaurantFinancialScreen from '../screens/restaurant/RestaurantFinancialScreen';
+import RestaurantMapScreen from '../screens/restaurant/RestaurantMapScreen';
+import RestaurantMenuScreen from '../screens/restaurant/RestaurantMenuScreen';
 
 const Tab = createBottomTabNavigator<RestaurantTabParamList>();
 
@@ -25,6 +27,16 @@ export default function RestaurantNavigator() {
         name="RestaurantFinancial"
         component={RestaurantFinancialScreen}
         options={{ tabBarLabel: 'Finansal', tabBarIcon: () => <Text>💵</Text> }}
+      />
+      <Tab.Screen
+        name="RestaurantMap"
+        component={RestaurantMapScreen}
+        options={{ tabBarLabel: 'Harita', tabBarIcon: () => <Text>📍</Text> }}
+      />
+      <Tab.Screen
+        name="RestaurantMenu"
+        component={RestaurantMenuScreen}
+        options={{ tabBarLabel: 'Menu', tabBarIcon: () => <Text>🍔</Text> }}
       />
     </Tab.Navigator>
   );

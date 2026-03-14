@@ -11,6 +11,34 @@ export interface DashboardStats {
   todayRevenue: number;
 }
 
+export interface AdminCourierPayload {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  vehicleType: string;
+  paymentPerOrder?: number;
+}
+
+export interface AdminCourierUpdatePayload {
+  name?: string;
+  phone?: string;
+  vehicleType?: string;
+  paymentPerOrder?: number;
+  isAvailable?: boolean;
+}
+
+export interface AdminRestaurantPayload {
+  email: string;
+  password: string;
+  name: string;
+  phone: string;
+  restaurantName: string;
+  address: string;
+  restaurantPhone: string;
+  commissionPerOrder?: number;
+}
+
 export const adminService = {
   getDashboardStats: async () => {
     const response = await api.get<{ stats: DashboardStats }>('/admin/stats');
@@ -39,6 +67,45 @@ export const adminService = {
 
   getAllRestaurants: async () => {
     const response = await api.get('/admin/restaurants');
+    return response.data;
+  },
+
+  createCourier: async (data: AdminCourierPayload) => {
+    const response = await api.post('/admin/couriers', data);
+    return response.data;
+  },
+
+  updateCourier: async (courierId: string, data: AdminCourierUpdatePayload) => {
+    const response = await api.patch(`/admin/couriers/${courierId}`, data);
+    return response.data;
+  },
+
+  deleteCourier: async (courierId: string) => {
+    const response = await api.delete(`/admin/couriers/${courierId}`);
+    return response.data;
+  },
+
+  createRestaurant: async (data: AdminRestaurantPayload) => {
+    const response = await api.post('/admin/restaurants', data);
+    return response.data;
+  },
+
+  updateRestaurantCommission: async (restaurantId: string, commissionPerOrder: number) => {
+    const response = await api.patch(`/admin/restaurants/${restaurantId}/commission`, {
+      commissionPerOrder
+    });
+    return response.data;
+  },
+
+  deleteRestaurant: async (restaurantId: string) => {
+    const response = await api.delete(`/admin/restaurants/${restaurantId}`);
+    return response.data;
+  },
+
+  getRestaurantFinancialReport: async (restaurantId: string, period: 'daily' | 'weekly' | 'monthly' = 'daily') => {
+    const response = await api.get(`/admin/restaurants/${restaurantId}/financial-report`, {
+      params: { period }
+    });
     return response.data;
   },
 

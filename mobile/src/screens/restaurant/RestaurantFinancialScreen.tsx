@@ -21,6 +21,14 @@ export default function RestaurantFinancialScreen() {
 
   useEffect(() => { load(); }, [load]);
 
+  const transactions = data?.transactions || [];
+  const summary = {
+    transactionCount: Number(data?.summary?.transactionCount || 0),
+    totalEarnings: Number(data?.summary?.totalEarnings || 0),
+    totalCommissions: Number(data?.summary?.totalCommissions || 0),
+    netBalance: Number(data?.summary?.netBalance || 0)
+  };
+
   return (
     <ScrollView
       style={styles.root}
@@ -36,35 +44,35 @@ export default function RestaurantFinancialScreen() {
         <>
           <View style={styles.grid}>
             <View style={[styles.statCard, { backgroundColor: '#eff6ff' }]}>
-              <Text style={styles.statLabel}>Toplam Siparis</Text>
-              <Text style={[styles.statValue, { color: '#1d4ed8' }]}>{data.summary.totalOrders}</Text>
+              <Text style={styles.statLabel}>Toplam Islem</Text>
+              <Text style={[styles.statValue, { color: '#1d4ed8' }]}>{summary.transactionCount}</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#ecfdf5' }]}>
               <Text style={styles.statLabel}>Toplam Ciro</Text>
-              <Text style={[styles.statValue, { color: '#059669' }]}>{data.summary.totalAmount.toFixed(2)} ₺</Text>
+              <Text style={[styles.statValue, { color: '#059669' }]}>{summary.totalEarnings.toFixed(2)} ₺</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#fef3c7' }]}>
               <Text style={styles.statLabel}>Komis. (Toplam)</Text>
-              <Text style={[styles.statValue, { color: '#d97706' }]}>{data.summary.totalCommission.toFixed(2)} ₺</Text>
+              <Text style={[styles.statValue, { color: '#d97706' }]}>{summary.totalCommissions.toFixed(2)} ₺</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#fce7f3' }]}>
               <Text style={styles.statLabel}>Net Gelir</Text>
-              <Text style={[styles.statValue, { color: '#9d174d' }]}>{data.summary.netRevenue.toFixed(2)} ₺</Text>
+              <Text style={[styles.statValue, { color: '#9d174d' }]}>{summary.netBalance.toFixed(2)} ₺</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Siparis Gecmisi</Text>
-          {data.orders.length === 0 && <Text style={styles.empty}>Henuz teslim edilmis siparis yok</Text>}
-          {data.orders.map((o: any) => (
-            <View key={o.orderId} style={styles.row}>
+          <Text style={styles.sectionTitle}>Islem Gecmisi</Text>
+          {transactions.length === 0 && <Text style={styles.empty}>Henuz finansal islem yok</Text>}
+          {transactions.map((transaction: any) => (
+            <View key={transaction.id} style={styles.row}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.rowMain}>{o.orderNumber}</Text>
-                <Text style={styles.rowSub}>{o.courierName ? `Kurye: ${o.courierName}` : 'Kurye atanmadi'}</Text>
-                <Text style={styles.rowSub}>{o.deliveredAt ? new Date(o.deliveredAt).toLocaleString('tr-TR') : ''}</Text>
+                <Text style={styles.rowMain}>{transaction.order?.orderNumber || transaction.transactionType}</Text>
+                <Text style={styles.rowSub}>{transaction.description || 'Aciklama yok'}</Text>
+                <Text style={styles.rowSub}>{transaction.date ? new Date(transaction.date).toLocaleString('tr-TR') : ''}</Text>
               </View>
               <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.rowAmount}>{o.orderAmount.toFixed(2)} ₺</Text>
-                <Text style={styles.rowCommission}>-{o.commission.toFixed(2)} ₺</Text>
+                <Text style={styles.rowAmount}>{Number(transaction.amount || 0).toFixed(2)} ₺</Text>
+                <Text style={styles.rowCommission}>{transaction.transactionType}</Text>
               </View>
             </View>
           ))}

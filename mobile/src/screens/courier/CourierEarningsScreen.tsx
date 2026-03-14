@@ -1,25 +1,46 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { financialService } from '../../services/financialService';
 
 export default function CourierEarningsScreen() {
   const [data, setData] = useState<{ summary: any; orders: any[] } | null>(null);
+  const [settlement, setSettlement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [settlementDate, setSettlementDate] = useState(new Date().toISOString().slice(0, 10));
+  const [closing, setClosing] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const res = await financialService.getCourierEarnings();
-      setData(res);
+      const [earningsRes, settlementRes] = await Promise.all([
+        financialService.getCourierEarnings(),
+        financialService.getCourierSettlement(settlementDate)
+      ]);
+      setData(earningsRes);
+      setSettlement(settlementRes.report);
     } catch {
       setData(null);
+      setSettlement(null);
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [settlementDate]);
 
   useEffect(() => { load(); }, [load]);
+
+  const handleCloseSettlement = async () => {
+    try {
+      setClosing(true);
+      const response = await financialService.closeCourierSettlement(settlementDate);
+      setSettlement(response.report);
+      Alert.alert('Basarili', response.message || 'Gun sonu hesap kapatildi');
+    } catch {
+      Alert.alert('Hata', 'Hesap kapama basarisiz oldu');
+    } finally {
+      setClosing(false);
+    }
+  };
 
   return (
     <ScrollView
@@ -61,6 +82,41 @@ export default function CourierEarningsScreen() {
               <Text style={styles.rowAmount}>+{o.earning.toFixed(2)} ₺</Text>
             </View>
           ))}
+
+          <View style={styles.settlementSection}>
+            <Text style={styles.sectionTitle}>Gunluk Hesap Kapama</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={settlementDate}
+              onChangeText={setSettlementDate}
+              placeholder="YYYY-AA-GG"
+            />
+            <View style={styles.grid}>
+              <View style={[styles.statCard, { backgroundColor: '#eff6ff' }]}>
+                <Text style={styles.statLabel}>Restoran</Text>
+                <Text style={[styles.statValue, { color: '#2563eb' }]}>{settlement?.totals?.totalRestaurants || 0}</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: '#fff7ed' }]}>
+                <Text style={styles.statLabel}>Acilan Hesap</Text>
+                <Text style={[styles.statValue, { color: '#ea580c' }]}>{settlement?.totals?.openRestaurants || 0}</Text>
+              </View>
+            </View>
+            <Pressable style={[styles.closeButton, closing && styles.closeButtonDisabled]} onPress={handleCloseSettlement} disabled={closing || !(settlement?.totals?.openRestaurants > 0)}>
+              <Text style={styles.closeButtonText}>{closing ? 'Kapatiliyor...' : 'Gun Sonu Hesap Kapat'}</Text>
+            </Pressable>
+            {(settlement?.rows || []).map((row: any) => (
+              <View key={row.restaurantId} style={styles.settlementRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowMain}>{row.restaurantName}</Text>
+                  <Text style={styles.rowSub}>{row.packageCount} paket</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.rowAmount}>{Number(row.amountToRestaurant || 0).toFixed(2)} ₺</Text>
+                  <Text style={styles.rowSub}>{row.isClosed ? 'Kapali' : 'Acik'}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
         </>
       )}
     </ScrollView>
@@ -75,9 +131,15 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   statValue: { fontSize: 22, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 10 },
+  dateInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   row: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   rowMain: { fontWeight: '600', color: '#0f172a' },
   rowSub: { fontSize: 12, color: '#64748b' },
   rowAmount: { fontSize: 16, fontWeight: '700', color: '#16a34a' },
+  settlementSection: { marginTop: 24, marginBottom: 24 },
+  closeButton: { backgroundColor: '#0f766e', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
+  closeButtonDisabled: { opacity: 0.5 },
+  closeButtonText: { color: '#fff', fontWeight: '700' },
+  settlementRow: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 40 }
 });

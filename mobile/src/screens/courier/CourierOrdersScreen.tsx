@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { orderService, Order } from '../../services/orderService';
+import { locationService } from '../../services/locationService';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Bekliyor',
@@ -38,6 +39,7 @@ export default function CourierOrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [isAvailable, setIsAvailable] = useState<boolean>(false);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -56,6 +58,15 @@ export default function CourierOrdersScreen() {
     const interval = setInterval(loadOrders, 15000);
     return () => clearInterval(interval);
   }, [loadOrders]);
+
+  const handleToggleAvailability = async () => {
+    try {
+      const response = await locationService.toggleAvailability();
+      setIsAvailable(response.isAvailable);
+    } catch {
+      Alert.alert('Hata', 'Musaitlik degistirilemedi');
+    }
+  };
 
   const handleAssign = async (orderId: string) => {
     setActionLoading(orderId);
@@ -170,9 +181,25 @@ export default function CourierOrdersScreen() {
           <Text style={styles.title}>Kurye Paneli</Text>
           <Text style={styles.sub}>Hos geldin, {user?.name}</Text>
         </View>
-        <Pressable style={styles.logoutBtn} onPress={logout}>
-          <Text style={styles.logoutText}>Cikis</Text>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable style={[styles.stateBtn, isAvailable ? styles.stateAvailable : styles.stateBusy]} onPress={handleToggleAvailability}>
+            <Text style={styles.stateText}>{isAvailable ? 'Musait' : 'Mesgul'}</Text>
+          </Pressable>
+          <Pressable style={styles.logoutBtn} onPress={logout}>
+            <Text style={styles.logoutText}>Cikis</Text>
+          </Pressable>
+        </View>
+      </View>
+
+      <View style={styles.summaryRow}>
+        <View style={[styles.summaryCard, { backgroundColor: '#eff6ff' }]}>
+          <Text style={styles.summaryLabel}>Acilan Havuz</Text>
+          <Text style={[styles.summaryValue, { color: '#2563eb' }]}>{orders.filter((o) => ['PENDING', 'APPROVED', 'PREPARING'].includes(o.status)).length}</Text>
+        </View>
+        <View style={[styles.summaryCard, { backgroundColor: '#ecfdf5' }]}>
+          <Text style={styles.summaryLabel}>Bendeki Siparis</Text>
+          <Text style={[styles.summaryValue, { color: '#16a34a' }]}>{orders.filter((o) => o.courier?.id === user?.id).length}</Text>
+        </View>
       </View>
 
       {loading ? (
@@ -205,8 +232,17 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   sub: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  headerActions: { flexDirection: 'row', gap: 8, alignItems: 'center' },
+  stateBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
+  stateAvailable: { backgroundColor: '#dcfce7' },
+  stateBusy: { backgroundColor: '#ffedd5' },
+  stateText: { fontSize: 12, fontWeight: '700', color: '#0f172a' },
   logoutBtn: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
   logoutText: { color: '#475569', fontSize: 13 },
+  summaryRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 12, paddingTop: 12 },
+  summaryCard: { flex: 1, borderRadius: 12, padding: 12 },
+  summaryLabel: { fontSize: 12, color: '#64748b' },
+  summaryValue: { fontSize: 20, fontWeight: '700', marginTop: 4 },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

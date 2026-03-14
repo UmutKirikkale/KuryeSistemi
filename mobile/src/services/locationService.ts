@@ -6,6 +6,20 @@ export const locationService = {
     return response.data;
   },
 
+  getCourierLocations: async () => {
+    const response = await api.get('/location/couriers');
+    return response.data as {
+      couriers: Array<{
+        courierId: string;
+        courierName?: string;
+        latitude: number;
+        longitude: number;
+        lastUpdated?: string;
+        isAvailable?: boolean;
+      }>;
+    };
+  },
+
   toggleAvailability: async () => {
     const response = await api.post('/location/toggle-availability');
     return response.data as { isAvailable: boolean };

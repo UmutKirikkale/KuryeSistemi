@@ -10,6 +10,7 @@ import {
   View
 } from 'react-native';
 import { adminService } from '../../services/adminService';
+import AdminHeader from '../../components/AdminHeader';
 
 interface UserItem {
   id: string;
@@ -97,7 +98,7 @@ export default function AdminUsersScreen() {
 
   return (
     <View style={styles.root}>
-      <Text style={styles.title}>Kullanicilar</Text>
+      <AdminHeader title="Kullanicilar" subtitle="Tum hesaplari tek ekranda yonet" />
       {loading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={{ marginTop: 40 }} />
       ) : (
@@ -116,7 +117,6 @@ export default function AdminUsersScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f1f5f9', padding: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: '#0f172a', marginBottom: 14 },
   list: { gap: 8 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 1 },
   name: { fontWeight: '700', fontSize: 14, color: '#0f172a' },

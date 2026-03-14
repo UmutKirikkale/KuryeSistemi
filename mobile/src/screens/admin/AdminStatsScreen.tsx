@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { adminService, DashboardStats } from '../../services/adminService';
-import { useAuthStore } from '../../store/authStore';
+import AdminHeader from '../../components/AdminHeader';
 
 export default function AdminStatsScreen() {
-  const { logout } = useAuthStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -12,7 +11,7 @@ export default function AdminStatsScreen() {
   const load = useCallback(async () => {
     try {
       const data = await adminService.getDashboardStats();
-      setStats(data);
+      setStats(data.stats);
     } catch {
       setStats(null);
     } finally {
@@ -28,8 +27,10 @@ export default function AdminStatsScreen() {
     { label: 'Toplam Restoran', key: 'totalRestaurants', color: '#d97706', bg: '#fefce8' },
     { label: 'Toplam Kurye', key: 'totalCouriers', color: '#7c3aed', bg: '#f5f3ff' },
     { label: 'Toplam Siparis', key: 'totalOrders', color: '#0f766e', bg: '#f0fdfa' },
-    { label: 'Bekleyen Siparis', key: 'pendingOrders', color: '#f59e0b', bg: '#fffbeb' },
-    { label: 'Teslim Edildi', key: 'deliveredOrders', color: '#16a34a', bg: '#ecfdf5' }
+    { label: 'Aktif Siparis', key: 'activeOrders', color: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Teslim Edildi', key: 'completedOrders', color: '#16a34a', bg: '#ecfdf5' },
+    { label: 'Toplam Gelir', key: 'totalRevenue', color: '#be123c', bg: '#fff1f2' },
+    { label: 'Bugun Gelir', key: 'todayRevenue', color: '#7c2d12', bg: '#ffedd5' }
   ];
 
   return (
@@ -37,9 +38,7 @@ export default function AdminStatsScreen() {
       style={styles.root}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
     >
-      <View style={styles.header}>
-        <Text style={styles.title}>Admin Dashboard</Text>
-      </View>
+      <AdminHeader title="Admin Dashboard" subtitle="Mobil yonetim paneli" />
 
       {loading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={{ marginTop: 40 }} />
@@ -63,8 +62,6 @@ export default function AdminStatsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f1f5f9', padding: 16 },
-  header: { marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { width: '47%', borderRadius: 14, padding: 16 },
   tileLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -12,13 +12,9 @@ import {
 import { useAuthStore } from '../store/authStore';
 
 export default function LoginScreen() {
-  const { login, hydrate, isLoading, error } = useAuthStore();
+  const { login, isLoading, error } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  useEffect(() => {
-    hydrate();
-  }, [hydrate]);
 
   const handleLogin = async () => {
     if (!email || !password) {
