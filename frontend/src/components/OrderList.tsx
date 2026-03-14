@@ -184,7 +184,9 @@ export default function OrderList({ orders, role }: OrderListProps) {
             </div>
             <div className="text-right">
               <p className="font-semibold text-lg">{order.orderAmount.toFixed(2)} ₺</p>
-              <p className="text-sm text-gray-600">Komisyon: {order.commissionAmount.toFixed(2)} ₺</p>
+              {role !== 'COURIER' && (
+                <p className="text-sm text-gray-600">Komisyon: {order.commissionAmount.toFixed(2)} ₺</p>
+              )}
             </div>
           </div>
 
