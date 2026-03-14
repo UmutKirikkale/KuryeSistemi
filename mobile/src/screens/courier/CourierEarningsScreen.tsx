@@ -7,6 +7,7 @@ export default function CourierEarningsScreen() {
   const [settlement, setSettlement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [earningsDate, setEarningsDate] = useState(new Date().toISOString().slice(0, 10));
   const [settlementDate, setSettlementDate] = useState(new Date().toISOString().slice(0, 10));
   const [closing, setClosing] = useState(false);
   const [deliveryQuery, setDeliveryQuery] = useState('');
@@ -14,7 +15,7 @@ export default function CourierEarningsScreen() {
   const load = useCallback(async () => {
     try {
       const [earningsRes, settlementRes] = await Promise.all([
-        financialService.getCourierEarnings(),
+        financialService.getCourierEarnings(earningsDate),
         financialService.getCourierSettlement(settlementDate)
       ]);
       setData(earningsRes);
@@ -26,7 +27,7 @@ export default function CourierEarningsScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [settlementDate]);
+  }, [earningsDate, settlementDate]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -66,9 +67,22 @@ export default function CourierEarningsScreen() {
         <Text style={styles.empty}>Veri yuklenemedi</Text>
       ) : (
         <>
+          <View style={styles.calendarBox}>
+            <Text style={styles.sectionTitle}>Kazanc Takvimi</Text>
+            <Text style={styles.calendarHint}>Gostergeler secilen gun icin hesaplanir. Varsayilan bugundur.</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={earningsDate}
+              onChangeText={setEarningsDate}
+              placeholder="YYYY-AA-GG"
+              placeholderTextColor="#94a3b8"
+              selectionColor="#0f766e"
+            />
+          </View>
+
           <View style={styles.grid}>
             <View style={[styles.statCard, { backgroundColor: '#ecfdf5' }]}>
-              <Text style={styles.statLabel}>Toplam Teslimat</Text>
+              <Text style={styles.statLabel}>Gunluk Teslimat</Text>
               <Text style={[styles.statValue, { color: '#059669' }]}>{data.summary.totalOrders}</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#eff6ff' }]}>
@@ -76,17 +90,19 @@ export default function CourierEarningsScreen() {
               <Text style={[styles.statValue, { color: '#2563eb' }]}>{data.summary.paymentPerOrder.toFixed(2)} ₺</Text>
             </View>
             <View style={[styles.statCard, { backgroundColor: '#fefce8' }]}>
-              <Text style={styles.statLabel}>Toplam Kazanc</Text>
+              <Text style={styles.statLabel}>Gunluk Kazanc</Text>
               <Text style={[styles.statValue, { color: '#ca8a04' }]}>{data.summary.totalEarnings.toFixed(2)} ₺</Text>
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>Son Teslimatlar</Text>
+          <Text style={styles.sectionTitle}>Secilen Gun Teslimatlari</Text>
           <TextInput
             style={styles.searchInput}
             value={deliveryQuery}
             onChangeText={setDeliveryQuery}
             placeholder="Restoran veya siparis no ara"
+            placeholderTextColor="#94a3b8"
+            selectionColor="#0f766e"
           />
           {data.orders.length === 0 && <Text style={styles.empty}>Henuz teslimat yok</Text>}
           {visibleDeliveries.map((o: any) => (
@@ -107,6 +123,8 @@ export default function CourierEarningsScreen() {
               value={settlementDate}
               onChangeText={setSettlementDate}
               placeholder="YYYY-AA-GG"
+              placeholderTextColor="#94a3b8"
+              selectionColor="#0f766e"
             />
             <View style={styles.grid}>
               <View style={[styles.statCard, { backgroundColor: '#eff6ff' }]}>
@@ -147,9 +165,11 @@ const styles = StyleSheet.create({
   statCard: { flex: 1, minWidth: '45%', borderRadius: 12, padding: 14 },
   statLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   statValue: { fontSize: 22, fontWeight: '700' },
+  calendarBox: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0', padding: 12, marginBottom: 16 },
+  calendarHint: { color: '#64748b', fontSize: 12, marginBottom: 10 },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 10 },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
-  dateInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  searchInput: { backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  dateInput: { backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   row: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   rowMain: { fontWeight: '600', color: '#0f172a' },
   rowSub: { fontSize: 12, color: '#64748b' },

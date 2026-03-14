@@ -15,6 +15,7 @@ export default function LoginScreen() {
   const { login, isLoading, error } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -40,19 +41,28 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="E-posta"
+          placeholderTextColor="#94a3b8"
+          selectionColor="#0f766e"
           keyboardType="email-address"
           autoCapitalize="none"
           value={email}
           onChangeText={setEmail}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Sifre"
-          secureTextEntry
-          value={password}
-          onChangeText={setPassword}
-        />
+        <View style={styles.passwordWrap}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Sifre"
+            placeholderTextColor="#94a3b8"
+            selectionColor="#0f766e"
+            secureTextEntry={!showPassword}
+            value={password}
+            onChangeText={setPassword}
+          />
+          <Pressable onPress={() => setShowPassword((prev) => !prev)}>
+            <Text style={styles.toggleText}>{showPassword ? 'Gizle' : 'Goster'}</Text>
+          </Pressable>
+        </View>
 
         {!!error && <Text style={styles.error}>{error}</Text>}
 
@@ -93,7 +103,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 10,
-    backgroundColor: '#fff'
+    backgroundColor: '#fff',
+    color: '#0f172a'
+  },
+  passwordWrap: {
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center'
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 10,
+    color: '#0f172a'
+  },
+  toggleText: {
+    color: '#1d4ed8',
+    fontWeight: '600',
+    fontSize: 12
   },
   error: {
     color: '#b91c1c',

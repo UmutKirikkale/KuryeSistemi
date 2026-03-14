@@ -144,6 +144,8 @@ export default function AdminUsersScreen() {
       <TextInput
         style={styles.searchInput}
         placeholder="Ad, email veya role gore ara"
+        placeholderTextColor="#94a3b8"
+        selectionColor="#7c3aed"
         value={query}
         onChangeText={setQuery}
       />
@@ -175,7 +177,7 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: '#7c3aed' },
   filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
   filterTextActive: { color: '#fff' },
-  searchInput: { backgroundColor: '#fff', borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
+  searchInput: { backgroundColor: '#fff', color: '#0f172a', borderRadius: 10, borderWidth: 1, borderColor: '#e2e8f0', paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
   list: { gap: 8 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 1 },
   name: { fontWeight: '700', fontSize: 14, color: '#0f172a' },

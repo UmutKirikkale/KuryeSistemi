@@ -95,6 +95,8 @@ export default function RestaurantFinancialScreen() {
           <TextInput
             style={styles.searchInput}
             placeholder="Siparis no, aciklama veya tur ara"
+            placeholderTextColor="#94a3b8"
+            selectionColor="#1d4ed8"
             value={query}
             onChangeText={setQuery}
           />
@@ -131,7 +133,7 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: '#1d4ed8' },
   filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
   filterTextActive: { color: '#fff' },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  searchInput: { backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   row: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   rowMain: { fontWeight: '600', color: '#0f172a' },
   rowSub: { fontSize: 12, color: '#64748b' },

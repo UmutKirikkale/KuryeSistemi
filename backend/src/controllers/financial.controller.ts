@@ -227,7 +227,7 @@ export const getRestaurantFinancials = async (req: AuthRequest, res: Response) =
 
 export const getCourierEarnings = async (req: AuthRequest, res: Response) => {
   try {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, date } = req.query;
 
     // Sadece kurye kendi kazançlarını görebilir
     if (req.userRole !== 'COURIER' && req.userRole !== 'ADMIN') {
@@ -248,7 +248,14 @@ export const getCourierEarnings = async (req: AuthRequest, res: Response) => {
       status: 'DELIVERED'
     };
 
-    if (startDate || endDate) {
+    if (date) {
+      const { startOfDay, endOfDay, dayKey } = getDayBounds(date as string);
+      whereClause.deliveredAt = {
+        gte: startOfDay,
+        lte: endOfDay
+      };
+      whereClause.__selectedDayKey = dayKey;
+    } else if (startDate || endDate) {
       whereClause.deliveredAt = {};
       if (startDate) {
         whereClause.deliveredAt.gte = new Date(startDate as string);
@@ -256,7 +263,17 @@ export const getCourierEarnings = async (req: AuthRequest, res: Response) => {
       if (endDate) {
         whereClause.deliveredAt.lte = new Date(endDate as string);
       }
+    } else {
+      const { startOfDay, endOfDay, dayKey } = getDayBounds();
+      whereClause.deliveredAt = {
+        gte: startOfDay,
+        lte: endOfDay
+      };
+      whereClause.__selectedDayKey = dayKey;
     }
+
+    const selectedDayKey = whereClause.__selectedDayKey;
+    delete whereClause.__selectedDayKey;
 
     const deliveredOrders = await prisma.order.findMany({
       where: whereClause,
@@ -273,6 +290,7 @@ export const getCourierEarnings = async (req: AuthRequest, res: Response) => {
     // Kazanç hesaplamaları (artık courierFee yerine paymentPerOrder kullanıyoruz)
     const paymentPerOrder = courierProfile.paymentPerOrder;
     const summary = {
+      selectedDay: selectedDayKey || null,
       totalOrders: deliveredOrders.length,
       paymentPerOrder,
       totalEarnings: deliveredOrders.length * paymentPerOrder,

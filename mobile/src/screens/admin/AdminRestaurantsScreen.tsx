@@ -113,6 +113,8 @@ export default function AdminRestaurantsScreen({ navigation }: any) {
       <TextInput
         style={styles.searchInput}
         placeholder="Restoran ara: ad, email, adres"
+        placeholderTextColor="#94a3b8"
+        selectionColor="#1d4ed8"
         value={query}
         onChangeText={setQuery}
       />
@@ -140,7 +142,7 @@ const styles = StyleSheet.create({
   summaryCard: { width: '48%', borderRadius: 12, padding: 12 },
   summaryLabel: { fontSize: 12, color: '#64748b' },
   summaryValue: { fontSize: 18, fontWeight: '700', marginTop: 4 },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
+  searchInput: { backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   list: { gap: 8 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', elevation: 1 },
   avatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },

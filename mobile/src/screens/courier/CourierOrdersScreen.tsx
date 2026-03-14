@@ -243,6 +243,8 @@ export default function CourierOrdersScreen() {
         value={query}
         onChangeText={setQuery}
         placeholder="Siparis no, musteri veya adres ara"
+        placeholderTextColor="#94a3b8"
+        selectionColor="#0f766e"
       />
 
       {loading ? (
@@ -291,7 +293,7 @@ const styles = StyleSheet.create({
   filterChipActive: { backgroundColor: '#0f766e' },
   filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
   filterTextActive: { color: '#fff' },
-  searchInput: { marginHorizontal: 12, marginTop: 10, marginBottom: 2, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  searchInput: { marginHorizontal: 12, marginTop: 10, marginBottom: 2, backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

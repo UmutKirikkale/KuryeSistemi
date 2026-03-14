@@ -1,10 +1,13 @@
 import { api } from './api';
 
 export const financialService = {
-  getCourierEarnings: async () => {
-    const response = await api.get('/financial/courier');
+  getCourierEarnings: async (date?: string) => {
+    const response = await api.get('/financial/courier', {
+      params: { date }
+    });
     return response.data as {
       summary: {
+        selectedDay?: string | null;
         totalOrders: number;
         paymentPerOrder: number;
         totalEarnings: number;
