@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Dimensions,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View
 } from 'react-native';
+import MapView, { Marker, Region } from 'react-native-maps';
 import { restaurantService } from '../../services/restaurantService';
 
 interface CourierLocation {
@@ -28,6 +30,27 @@ export default function RestaurantMapScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+
+  const getInitialRegion = (): Region => {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      return {
+        latitude: lat,
+        longitude: lng,
+        latitudeDelta: 0.08,
+        longitudeDelta: 0.08
+      };
+    }
+
+    return {
+      latitude: 39.0,
+      longitude: 35.0,
+      latitudeDelta: 7,
+      longitudeDelta: 7
+    };
+  };
 
   const load = useCallback(async () => {
     try {
@@ -79,12 +102,43 @@ export default function RestaurantMapScreen() {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
     >
       <Text style={styles.title}>Canli Kurye Takibi</Text>
-      <Text style={styles.subtitle}>Harita yerine operasyon odakli canli konum listesi</Text>
+      <Text style={styles.subtitle}>Restoran ve kuryeleri harita uzerinden canli takip edin</Text>
 
       {loading ? (
         <ActivityIndicator size="large" color="#1d4ed8" style={{ marginTop: 40 }} />
       ) : (
         <>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Harita Gorunumu</Text>
+            <MapView
+              style={styles.map}
+              initialRegion={getInitialRegion()}
+              showsUserLocation={false}
+              showsCompass
+              showsTraffic={false}
+            >
+              {profile?.latitude != null && profile?.longitude != null && (
+                <Marker
+                  coordinate={{ latitude: Number(profile.latitude), longitude: Number(profile.longitude) }}
+                  title={profile?.name || 'Restoran'}
+                  description={profile?.address || 'Restoran konumu'}
+                  pinColor="#dc2626"
+                />
+              )}
+
+              {couriers.map((courier) => (
+                <Marker
+                  key={courier.courierId}
+                  coordinate={{ latitude: Number(courier.latitude), longitude: Number(courier.longitude) }}
+                  title={courier.courierName || 'Kurye'}
+                  description={courier.updatedAt ? `Guncelleme: ${new Date(courier.updatedAt).toLocaleTimeString('tr-TR')}` : 'Canli'}
+                  pinColor="#1d4ed8"
+                />
+              ))}
+            </MapView>
+            <Text style={styles.meta}>Kirmizi: Restoran, Mavi: Kurye</Text>
+          </View>
+
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Restoran Konumu</Text>
             <Text style={styles.meta}>Adres: {profile?.address || '-'}</Text>
@@ -138,6 +192,12 @@ const styles = StyleSheet.create({
   title: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
   subtitle: { color: '#64748b', marginTop: 4, marginBottom: 16 },
   section: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 14 },
+  map: {
+    width: '100%',
+    height: Math.max(260, Math.round(Dimensions.get('window').height * 0.34)),
+    borderRadius: 12,
+    marginBottom: 10
+  },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
   meta: { color: '#475569', marginBottom: 10 },
   rowInputs: { flexDirection: 'row', gap: 10 },

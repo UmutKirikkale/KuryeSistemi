@@ -6,6 +6,7 @@ import { wsService } from '../services/websocket';
 import { restaurantService } from '../services/restaurantService';
 import { locationService } from '../services/locationService';
 import { financialService } from '../services/financialService';
+import { orderService } from '../services/orderService';
 import {
   LogOut,
   Package,
@@ -42,6 +43,21 @@ interface RestaurantMenuCategory {
   menuItems: RestaurantMenuItem[];
 }
 
+interface RestaurantHistoryOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  pickupAddress: string;
+  deliveryAddress: string;
+  orderAmount: number;
+  customerName: string;
+  customerPhone: string;
+  paymentMethod?: 'CASH' | 'CARD';
+  sourcePlatform?: string;
+  externalOrderId?: string;
+  createdAt: string;
+}
+
 export default function RestaurantDashboard() {
   const { user, logout } = useAuthStore();
   const { orders, fetchOrders } = useOrderStore();
@@ -49,6 +65,7 @@ export default function RestaurantDashboard() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showOCRModal, setShowOCRModal] = useState(false);
   const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<[number, number]>([35.1264, 33.4299]);
   const [tempLocation, setTempLocation] = useState<[number, number]>([35.1264, 33.4299]);
   const [financialData, setFinancialData] = useState<any>(null);
@@ -57,6 +74,11 @@ export default function RestaurantDashboard() {
   const [menuLoading, setMenuLoading] = useState(false);
   const [menuCategories, setMenuCategories] = useState<RestaurantMenuCategory[]>([]);
   const [uncategorizedItems, setUncategorizedItems] = useState<RestaurantMenuItem[]>([]);
+  const [orderHistory, setOrderHistory] = useState<RestaurantHistoryOrder[]>([]);
+  const [orderHistoryLoading, setOrderHistoryLoading] = useState(false);
+  const [orderHistoryPage, setOrderHistoryPage] = useState(1);
+  const [orderHistoryTotalPages, setOrderHistoryTotalPages] = useState(1);
+  const [orderHistoryTotal, setOrderHistoryTotal] = useState(0);
   const [categoryName, setCategoryName] = useState('');
   const [itemForm, setItemForm] = useState({
     name: '',
@@ -275,6 +297,29 @@ export default function RestaurantDashboard() {
     }
   };
 
+  const fetchOrderHistory = async (page = 1) => {
+    try {
+      setOrderHistoryLoading(true);
+      const response = await orderService.getOrders({ page, limit: 25 });
+      setOrderHistory(response.orders || []);
+      setOrderHistoryPage(response.pagination?.page || page);
+      setOrderHistoryTotalPages(response.pagination?.pages || 1);
+      setOrderHistoryTotal(response.pagination?.total || 0);
+    } catch (error) {
+      console.error('Failed to load order history:', error);
+      setOrderHistory([]);
+      setOrderHistoryTotal(0);
+      setOrderHistoryTotalPages(1);
+    } finally {
+      setOrderHistoryLoading(false);
+    }
+  };
+
+  const handleOpenAllOrders = async () => {
+    setShowAllOrdersModal(true);
+    await fetchOrderHistory(1);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -414,6 +459,12 @@ export default function RestaurantDashboard() {
                     </span>
                   </div>
                   <div className="flex gap-2">
+                    <button
+                      onClick={handleOpenAllOrders}
+                      className="btn btn-secondary"
+                    >
+                      Tüm Sipariş Geçmişi
+                    </button>
                     <button
                       onClick={() => setShowOCRModal(true)}
                       className="btn btn-primary flex items-center gap-2"
@@ -714,6 +765,88 @@ export default function RestaurantDashboard() {
             loadFinancialData();
           }}
         />
+      )}
+
+      {showAllOrdersModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Tüm Sipariş Geçmişi</h3>
+                <p className="text-sm text-gray-600">Açılıştan bugüne toplam {orderHistoryTotal} sipariş</p>
+              </div>
+              <button
+                onClick={() => setShowAllOrdersModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Kapat"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-auto flex-1 p-6">
+              {orderHistoryLoading ? (
+                <p className="text-sm text-gray-500">Sipariş geçmişi yükleniyor...</p>
+              ) : orderHistory.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-10">Kayıt bulunamadı</p>
+              ) : (
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b bg-gray-50">
+                      <th className="py-2 px-2">Tarih</th>
+                      <th className="py-2 px-2">Sipariş No</th>
+                      <th className="py-2 px-2">Durum</th>
+                      <th className="py-2 px-2">Müşteri</th>
+                      <th className="py-2 px-2">Alış Adresi</th>
+                      <th className="py-2 px-2">Teslimat Adresi</th>
+                      <th className="py-2 px-2">Platform</th>
+                      <th className="py-2 px-2">Ödeme</th>
+                      <th className="py-2 px-2">Tutar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderHistory.map((order) => (
+                      <tr key={order.id} className="border-b last:border-0 align-top">
+                        <td className="py-2 px-2 whitespace-nowrap">{new Date(order.createdAt).toLocaleString('tr-TR')}</td>
+                        <td className="py-2 px-2 font-medium">{order.orderNumber}</td>
+                        <td className="py-2 px-2">{order.status}</td>
+                        <td className="py-2 px-2">{order.customerName} ({order.customerPhone})</td>
+                        <td className="py-2 px-2">{order.pickupAddress}</td>
+                        <td className="py-2 px-2">{order.deliveryAddress}</td>
+                        <td className="py-2 px-2">
+                          {order.sourcePlatform || '-'}
+                          {order.externalOrderId ? ` (${order.externalOrderId})` : ''}
+                        </td>
+                        <td className="py-2 px-2">{order.paymentMethod === 'CARD' ? 'Kart' : order.paymentMethod === 'CASH' ? 'Nakit' : '-'}</td>
+                        <td className="py-2 px-2 font-semibold whitespace-nowrap">{order.orderAmount.toFixed(2)} ₺</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 px-6 py-3 flex items-center justify-between">
+              <p className="text-sm text-gray-600">Sayfa {orderHistoryPage} / {orderHistoryTotalPages}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => fetchOrderHistory(orderHistoryPage - 1)}
+                  disabled={orderHistoryLoading || orderHistoryPage <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                >
+                  Önceki
+                </button>
+                <button
+                  onClick={() => fetchOrderHistory(orderHistoryPage + 1)}
+                  disabled={orderHistoryLoading || orderHistoryPage >= orderHistoryTotalPages}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                >
+                  Sonraki
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

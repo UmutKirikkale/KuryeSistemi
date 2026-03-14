@@ -123,6 +123,12 @@ export default function RestaurantOrdersScreen() {
 
         <Text style={styles.label}>Musteri: <Text style={styles.value}>{item.customerName}</Text></Text>
         <Text style={styles.label}>Teslimat: <Text style={styles.value}>{item.deliveryAddress}</Text></Text>
+        {item.sourcePlatform && (
+          <Text style={styles.label}>Platform: <Text style={styles.value}>{item.sourcePlatform}</Text></Text>
+        )}
+        {item.externalOrderId && (
+          <Text style={styles.label}>Platform Siparis No: <Text style={styles.value}>{item.externalOrderId}</Text></Text>
+        )}
         <Text style={styles.label}>Tutar: <Text style={styles.value}>{item.orderAmount.toFixed(2)} ₺</Text></Text>
         {item.courier && (
           <Text style={styles.label}>Kurye: <Text style={styles.value}>{item.courier.name}</Text></Text>

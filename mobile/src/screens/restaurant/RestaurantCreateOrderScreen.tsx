@@ -21,6 +21,8 @@ type FormState = {
   customerPhone: string;
   deliveryAddress: string;
   orderAmount: string;
+  sourcePlatform: '' | 'FEEDME' | 'YEMEKSEPETI';
+  externalOrderId: string;
   notes: string;
 };
 
@@ -30,6 +32,8 @@ export default function RestaurantCreateOrderScreen() {
     customerPhone: '',
     deliveryAddress: '',
     orderAmount: '',
+    sourcePlatform: '',
+    externalOrderId: '',
     notes: ''
   });
   const [loading, setLoading] = useState(false);
@@ -127,6 +131,11 @@ export default function RestaurantCreateOrderScreen() {
       return;
     }
 
+    if (form.sourcePlatform && !form.externalOrderId.trim()) {
+      Alert.alert('Eksik Bilgi', 'Platform secildiyse platform siparis numarasi girin.');
+      return;
+    }
+
     setLoading(true);
     try {
       const payload: CreateOrderData = {
@@ -139,6 +148,8 @@ export default function RestaurantCreateOrderScreen() {
         deliveryLatitude: restaurantProfile?.latitude ?? 0,
         deliveryLongitude: restaurantProfile?.longitude ?? 0,
         orderAmount: amount,
+        sourcePlatform: form.sourcePlatform || undefined,
+        externalOrderId: form.externalOrderId.trim() || undefined,
         notes: form.notes.trim() || undefined
       };
       await orderService.createOrder(payload);
@@ -146,7 +157,7 @@ export default function RestaurantCreateOrderScreen() {
         {
           text: 'Tamam',
           onPress: () =>
-            setForm({ customerName: '', customerPhone: '', deliveryAddress: '', orderAmount: '', notes: '' })
+            setForm({ customerName: '', customerPhone: '', deliveryAddress: '', orderAmount: '', sourcePlatform: '', externalOrderId: '', notes: '' })
         }
       ]);
     } catch (e: any) {
@@ -222,6 +233,37 @@ export default function RestaurantCreateOrderScreen() {
           keyboardType="decimal-pad"
         />
 
+        <Text style={styles.label}>Siparis Platformu</Text>
+        <View style={styles.platformRow}>
+          <Pressable
+            style={[styles.platformChip, form.sourcePlatform === '' && styles.platformChipActive]}
+            onPress={() => setForm((prev) => ({ ...prev, sourcePlatform: '', externalOrderId: '' }))}
+          >
+            <Text style={[styles.platformChipText, form.sourcePlatform === '' && styles.platformChipTextActive]}>Platform Yok</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.platformChip, form.sourcePlatform === 'FEEDME' && styles.platformChipActive]}
+            onPress={() => setForm((prev) => ({ ...prev, sourcePlatform: 'FEEDME' }))}
+          >
+            <Text style={[styles.platformChipText, form.sourcePlatform === 'FEEDME' && styles.platformChipTextActive]}>Feedme</Text>
+          </Pressable>
+          <Pressable
+            style={[styles.platformChip, form.sourcePlatform === 'YEMEKSEPETI' && styles.platformChipActive]}
+            onPress={() => setForm((prev) => ({ ...prev, sourcePlatform: 'YEMEKSEPETI' }))}
+          >
+            <Text style={[styles.platformChipText, form.sourcePlatform === 'YEMEKSEPETI' && styles.platformChipTextActive]}>Yemeksepeti</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.label}>Platform Siparis No</Text>
+        <TextInput
+          style={[styles.input, !form.sourcePlatform && styles.inputDisabled]}
+          value={form.externalOrderId}
+          onChangeText={set('externalOrderId')}
+          editable={!!form.sourcePlatform}
+          placeholder={form.sourcePlatform ? 'Orn: YS-123456' : 'Once platform secin'}
+        />
+
         <Text style={styles.label}>Not</Text>
         <TextInput
           style={[styles.input, styles.multiline]}
@@ -271,6 +313,12 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
     marginBottom: 12
   },
+  inputDisabled: { backgroundColor: '#f1f5f9', color: '#94a3b8' },
+  platformRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginBottom: 12 },
+  platformChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#e2e8f0' },
+  platformChipActive: { backgroundColor: '#1d4ed8' },
+  platformChipText: { color: '#334155', fontSize: 12, fontWeight: '700' },
+  platformChipTextActive: { color: '#fff' },
   multiline: { minHeight: 72, textAlignVertical: 'top' },
   btn: { backgroundColor: '#1d4ed8', paddingVertical: 14, borderRadius: 12, alignItems: 'center', marginTop: 12 },
   btnDisabled: { opacity: 0.6 },

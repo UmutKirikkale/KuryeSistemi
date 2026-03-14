@@ -45,6 +45,12 @@ interface Order {
   id: string;
   orderNumber: string;
   status: string;
+  pickupAddress?: string;
+  deliveryAddress?: string;
+  customerName?: string;
+  customerPhone?: string;
+  sourcePlatform?: string;
+  externalOrderId?: string;
   paymentMethod?: 'CASH' | 'CARD';
   orderAmount: number;
   courierFee: number;
@@ -236,6 +242,12 @@ export default function AdminDashboard() {
   });
   const [recentUsers, setRecentUsers] = useState<User[]>([]);
   const [recentOrders, setRecentOrders] = useState<Order[]>([]);
+  const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
+  const [allOrders, setAllOrders] = useState<Order[]>([]);
+  const [allOrdersLoading, setAllOrdersLoading] = useState(false);
+  const [allOrdersPage, setAllOrdersPage] = useState(1);
+  const [allOrdersTotalPages, setAllOrdersTotalPages] = useState(1);
+  const [allOrdersTotal, setAllOrdersTotal] = useState(0);
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [todayTotalRevenue, setTodayTotalRevenue] = useState<number>(0);
@@ -420,6 +432,29 @@ export default function AdminDashboard() {
       console.error('Son siparisler yuklenemedi:', error);
       setRecentOrders([]);
     }
+  };
+
+  const fetchAllOrdersHistory = async (page = 1) => {
+    try {
+      setAllOrdersLoading(true);
+      const response = await adminService.getAllOrders({ page, limit: 25 });
+      setAllOrders(response.orders || []);
+      setAllOrdersPage(response.pagination?.page || page);
+      setAllOrdersTotalPages(response.pagination?.totalPages || 1);
+      setAllOrdersTotal(response.pagination?.total || 0);
+    } catch (error) {
+      console.error('Tum siparis gecmisi yuklenemedi:', error);
+      setAllOrders([]);
+      setAllOrdersTotal(0);
+      setAllOrdersTotalPages(1);
+    } finally {
+      setAllOrdersLoading(false);
+    }
+  };
+
+  const handleOpenAllOrders = async () => {
+    setShowAllOrdersModal(true);
+    await fetchAllOrdersHistory(1);
   };
 
   useEffect(() => {
@@ -936,7 +971,13 @@ export default function AdminDashboard() {
                 <Package className="w-5 h-5 mr-2 text-green-600" />
                 Son Siparişler
               </h3>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handleOpenAllOrders}
+                  className="px-3 py-1 rounded-full text-xs font-semibold bg-gray-900 text-white"
+                >
+                  Tüm Geçmiş
+                </button>
                 <button
                   onClick={() => setRecentOrdersPeriod('daily')}
                   className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
@@ -975,6 +1016,12 @@ export default function AdminDashboard() {
                     <div>
                       <p className="font-medium text-gray-900">{order.orderNumber}</p>
                       <p className="text-sm text-gray-600">{order.restaurant.name}</p>
+                      {order.sourcePlatform && (
+                        <p className="text-xs text-indigo-700">Platform: {order.sourcePlatform}</p>
+                      )}
+                      {order.externalOrderId && (
+                        <p className="text-xs text-indigo-700">Platform Sipariş No: {order.externalOrderId}</p>
+                      )}
                       <p className="text-xs text-gray-500">
                         Ödeme: {order.paymentMethod === 'CARD' ? 'Kredi Kartı' : order.paymentMethod === 'CASH' ? 'Nakit' : 'Belirtilmedi'}
                       </p>
@@ -1021,6 +1068,92 @@ export default function AdminDashboard() {
           </div>
         </div>
       </main>
+
+      {/* Create Courier Modal */}
+      {showAllOrdersModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Tüm Sipariş Geçmişi</h3>
+                <p className="text-sm text-gray-600">Sistem açılışından bugüne toplam {allOrdersTotal} sipariş</p>
+              </div>
+              <button
+                onClick={() => setShowAllOrdersModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                title="Kapat"
+                aria-label="Kapat"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="overflow-auto flex-1 p-6">
+              {allOrdersLoading ? (
+                <p className="text-sm text-gray-500">Sipariş geçmişi yükleniyor...</p>
+              ) : allOrders.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-10">Kayıt bulunamadı</p>
+              ) : (
+                <table className="min-w-full text-sm">
+                  <thead>
+                    <tr className="text-left border-b bg-gray-50">
+                      <th className="py-2 px-2">Tarih</th>
+                      <th className="py-2 px-2">Sipariş No</th>
+                      <th className="py-2 px-2">Restoran</th>
+                      <th className="py-2 px-2">Durum</th>
+                      <th className="py-2 px-2">Müşteri</th>
+                      <th className="py-2 px-2">Alış Adresi</th>
+                      <th className="py-2 px-2">Teslimat Adresi</th>
+                      <th className="py-2 px-2">Platform</th>
+                      <th className="py-2 px-2">Ödeme</th>
+                      <th className="py-2 px-2">Tutar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allOrders.map((order) => (
+                      <tr key={order.id} className="border-b last:border-0 align-top">
+                        <td className="py-2 px-2 whitespace-nowrap">{new Date(order.createdAt).toLocaleString('tr-TR')}</td>
+                        <td className="py-2 px-2 font-medium">{order.orderNumber}</td>
+                        <td className="py-2 px-2">{order.restaurant?.name || '-'}</td>
+                        <td className="py-2 px-2">{order.status}</td>
+                        <td className="py-2 px-2">{order.customerName || '-'} {order.customerPhone ? `(${order.customerPhone})` : ''}</td>
+                        <td className="py-2 px-2">{order.pickupAddress || '-'}</td>
+                        <td className="py-2 px-2">{order.deliveryAddress || '-'}</td>
+                        <td className="py-2 px-2">
+                          {order.sourcePlatform || '-'}
+                          {order.externalOrderId ? ` (${order.externalOrderId})` : ''}
+                        </td>
+                        <td className="py-2 px-2">{order.paymentMethod === 'CARD' ? 'Kart' : order.paymentMethod === 'CASH' ? 'Nakit' : '-'}</td>
+                        <td className="py-2 px-2 font-semibold whitespace-nowrap">{order.orderAmount.toFixed(2)} ₺</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 px-6 py-3 flex items-center justify-between">
+              <p className="text-sm text-gray-600">Sayfa {allOrdersPage} / {allOrdersTotalPages}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => fetchAllOrdersHistory(allOrdersPage - 1)}
+                  disabled={allOrdersLoading || allOrdersPage <= 1}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                >
+                  Önceki
+                </button>
+                <button
+                  onClick={() => fetchAllOrdersHistory(allOrdersPage + 1)}
+                  disabled={allOrdersLoading || allOrdersPage >= allOrdersTotalPages}
+                  className="px-3 py-1.5 rounded-lg border border-gray-300 text-sm disabled:opacity-50"
+                >
+                  Sonraki
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Create Courier Modal */}
       {showCreateCourierModal && (

@@ -11,6 +11,8 @@ interface RecentOrder {
   status: string;
   orderAmount: number;
   createdAt: string;
+  sourcePlatform?: string;
+  externalOrderId?: string;
   restaurant?: {
     name?: string;
   };
@@ -178,6 +180,8 @@ export default function AdminStatsScreen({ navigation }: any) {
                 <View>
                   <Text style={styles.orderNo}>{order.orderNumber}</Text>
                   <Text style={styles.orderMeta}>{order.restaurant?.name || 'Restoran yok'}</Text>
+                  {order.sourcePlatform && <Text style={styles.orderMeta}>Platform: {order.sourcePlatform}</Text>}
+                  {order.externalOrderId && <Text style={styles.orderMeta}>Platform Siparis No: {order.externalOrderId}</Text>}
                   <Text style={styles.orderMeta}>
                     {new Date(order.createdAt).toLocaleDateString('tr-TR')} {new Date(order.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                   </Text>

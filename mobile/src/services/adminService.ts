@@ -74,6 +74,8 @@ export const adminService = {
         status: string;
         orderAmount: number;
         createdAt: string;
+        sourcePlatform?: string;
+        externalOrderId?: string;
         restaurant?: { name?: string };
       }>;
       pagination: any;

@@ -19,6 +19,8 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
     orderAmount: '',
     customerName: '',
     customerPhone: '',
+    sourcePlatform: '',
+    externalOrderId: '',
     notes: ''
   });
 
@@ -42,9 +44,16 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
       return;
     }
 
+    if (formData.sourcePlatform && !formData.externalOrderId.trim()) {
+      alert('Platform seçiliyse platform sipariş numarası zorunludur.');
+      return;
+    }
+
     try {
       await createOrder({
         ...formData,
+        sourcePlatform: formData.sourcePlatform || undefined,
+        externalOrderId: formData.externalOrderId.trim() || undefined,
         notes: formData.notes.trim() || undefined,
         orderAmount
       });
@@ -141,36 +150,6 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              <div>
-                <label htmlFor="deliveryLatitude" className="label">Enlem</label>
-                <input
-                  id="deliveryLatitude"
-                  type="number"
-                  step="any"
-                  className="input"
-                  value={formData.deliveryLatitude}
-                  onChange={(e) =>
-                    setFormData({ ...formData, deliveryLatitude: parseFloat(e.target.value) })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="deliveryLongitude" className="label">Boylam</label>
-                <input
-                  id="deliveryLongitude"
-                  type="number"
-                  step="any"
-                  className="input"
-                  value={formData.deliveryLongitude}
-                  onChange={(e) =>
-                    setFormData({ ...formData, deliveryLongitude: parseFloat(e.target.value) })
-                  }
-                  required
-                />
-              </div>
-            </div>
           </div>
 
           {/* Customer Info */}
@@ -226,6 +205,43 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
               <p className="text-xs text-gray-500 mt-1">
                 Kurye ücreti sistem tarafından otomatik hesaplanır.
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+              <div>
+                <label htmlFor="sourcePlatform" className="label">Sipariş Platformu</label>
+                <select
+                  id="sourcePlatform"
+                  className="input"
+                  value={formData.sourcePlatform}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      sourcePlatform: e.target.value,
+                      externalOrderId: e.target.value ? formData.externalOrderId : ''
+                    })
+                  }
+                >
+                  <option value="">Platform Yok</option>
+                  <option value="FEEDME">Feedme</option>
+                  <option value="YEMEKSEPETI">Yemeksepeti</option>
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="externalOrderId" className="label">Platform Sipariş No</label>
+                <input
+                  id="externalOrderId"
+                  type="text"
+                  className="input"
+                  value={formData.externalOrderId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, externalOrderId: e.target.value })
+                  }
+                  disabled={!formData.sourcePlatform}
+                  placeholder={formData.sourcePlatform ? 'Örn: YS-123456' : 'Önce platform seçin'}
+                />
+              </div>
             </div>
           </div>
 

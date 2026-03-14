@@ -41,17 +41,26 @@ export const ocrService = {
   extractOrderFromImage: async (imageUri: string, fileName?: string, mimeType?: string) => {
     const formData = new FormData();
 
+    const normalizedType = mimeType && mimeType.startsWith('image/')
+      ? mimeType
+      : 'image/jpeg';
+
+    const normalizedName =
+      fileName ||
+      `order-${Date.now()}.${normalizedType.includes('png') ? 'png' : 'jpg'}`;
+
     formData.append('orderImage', {
       uri: imageUri,
-      name: fileName || `order-${Date.now()}.jpg`,
-      type: mimeType || 'image/jpeg'
+      name: normalizedName,
+      type: normalizedType
     } as any);
 
     const response = await api.post<OCRResponse>('/ocr/extract-order', formData, {
       headers: {
-        'Content-Type': undefined
+        Accept: 'application/json',
+        'Content-Type': 'multipart/form-data'
       },
-      timeout: 60000
+      timeout: 120000
     });
 
     return response.data;
