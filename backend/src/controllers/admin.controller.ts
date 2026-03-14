@@ -787,7 +787,7 @@ export const resetAllData = async (req: AuthRequest, res: Response): Promise<any
           platformCommissionTemplates: defaultPlatformCommissionTemplates
         }
       });
-    });
+    }, { timeout: 30000 });
 
     res.json({
       message: 'All operational data has been reset successfully'

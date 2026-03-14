@@ -266,6 +266,7 @@ export default function AdminDashboard() {
   const [platformCommissionTemplates, setPlatformCommissionTemplates] = useState<SystemSettings['platformCommissionTemplates']>(defaultPlatformCommissionTemplates);
   const [settingsSaving, setSettingsSaving] = useState(false);
   const [resettingData, setResettingData] = useState(false);
+
   const [courierForm, setCourierForm] = useState({
     email: '',
     password: '',
@@ -373,36 +374,32 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleResetAllData = async () => {
-    const approved = window.confirm('Tum siparis, restoran, kurye, musteri ve finansal veriler silinecek. Devam edilsin mi?');
-    if (!approved) {
-      return;
-    }
 
-    const confirmationText = window.prompt('Onaylamak icin SIFIRLA yazin');
-    if (confirmationText !== 'SIFIRLA') {
-      alert('Islem iptal edildi. Dogrulama metni hatali.');
-      return;
-    }
 
-    try {
-      setResettingData(true);
-      const response = await adminService.resetAllData();
-      alert(response?.message || 'Tum veriler sifirlandi');
-      await fetchDashboardData();
-      await fetchSystemSettings();
-      setRecentUsers([]);
-      setRecentOrders([]);
-      setCouriers([]);
-      setRestaurants([]);
-      setFinancialReport(null);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Veri sifirlama basarisiz oldu';
-      alert(message);
-    } finally {
-      setResettingData(false);
-    }
-  };
+    const handleResetAllData = async () => {
+      const approved = window.confirm(
+        'D\u0130KKAT: T\u00fcm sipari\u015fler, restoranlar, kuryeler, m\u00fc\u015fteriler ve finansal veriler kal\u0131c\u0131 olarak silinecek. Admin hesaplar\u0131 korunur.\n\nDevam etmek istiyor musunuz?'
+      );
+      if (!approved) return;
+
+      try {
+        setResettingData(true);
+        const response = await adminService.resetAllData();
+        alert(response?.message || 'T\u00fcm veriler s\u0131f\u0131rland\u0131');
+        await fetchDashboardData();
+        await fetchSystemSettings();
+        setRecentUsers([]);
+        setRecentOrders([]);
+        setCouriers([]);
+        setRestaurants([]);
+        setFinancialReport(null);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Veri s\u0131f\u0131rlama ba\u015far\u0131s\u0131z oldu';
+        alert(message);
+      } finally {
+        setResettingData(false);
+      }
+    };
 
   const fetchDashboardData = async () => {
     try {
@@ -727,13 +724,13 @@ export default function AdminDashboard() {
                 disabled={resettingData}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {resettingData ? 'Sifirlaniyor...' : 'Tum Verileri Sifirla'}
+                {resettingData ? 'S\u0131f\u0131rlan\u0131yor...' : 'T\u00fcm Verileri S\u0131f\u0131rla'}
               </button>
               <button
                 onClick={logout}
                 className="btn btn-secondary"
               >
-                Çıkış Yap
+                \u00c7\u0131k\u0131\u015f Yap
               </button>
             </div>
           </div>
@@ -869,32 +866,7 @@ export default function AdminDashboard() {
                   {settingsSaving ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>
               </div>
-              <p className="text-xs font-medium text-gray-600 mt-4 mb-2">Platform Komisyon Şablonu (%)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {(Object.keys(platformCommissionTemplates) as Array<keyof SystemSettings['platformCommissionTemplates']>).map((platformKey) => (
-                  <label key={platformKey} className="flex items-center justify-between gap-2 text-xs text-gray-700 bg-gray-50 rounded-md px-2 py-1.5">
-                    <span>{platformLabels[platformKey]}</span>
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={platformCommissionTemplates[platformKey]}
-                      onChange={(event) => {
-                        const nextValue = parseInt(event.target.value, 10);
-                        setPlatformCommissionTemplates((prev) => ({
-                          ...prev,
-                          [platformKey]: Number.isFinite(nextValue) ? nextValue : 0
-                        }));
-                      }}
-                      className="w-20 px-2 py-1 border border-gray-300 rounded-md text-xs text-right"
-                      aria-label={`${platformLabels[platformKey]} komisyon yüzdesi`}
-                    />
-                  </label>
-                ))}
-              </div>
-              <p className="text-[11px] text-gray-500 mt-2">
-                Bu oranlar restoran baz komisyonuna eklenir. Örn: Restoran 40 + Yemeksepeti 35 = Toplam 75 TL.
-              </p>
+
               {systemSettings && (
                 systemSettings.courierAutoBusyAfterOrders !== autoBusyAfterOrders ||
                 JSON.stringify(systemSettings.platformCommissionTemplates) !== JSON.stringify(platformCommissionTemplates)

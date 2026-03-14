@@ -23,44 +23,6 @@ export default function AdminStatsScreen({ navigation }: any) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleResetAllData = () => {
-    Alert.alert(
-      'Tum Verileri Sifirla',
-      'Tum siparis, restoran, kurye, musteri ve finansal veriler silinecek. Devam etmek istiyor musunuz?',
-      [
-        { text: 'Vazgec', style: 'cancel' },
-        {
-          text: 'Devam Et',
-          style: 'destructive',
-          onPress: async () => {
-            Alert.alert(
-              'Son Onay',
-              'Bu islem geri alinamaz. Emin misiniz?',
-              [
-                { text: 'Iptal', style: 'cancel' },
-                {
-                  text: 'Tum Verileri Sifirla',
-                  style: 'destructive',
-                  onPress: async () => {
-                    try {
-                      setResetting(true);
-                      const response = await adminService.resetAllData();
-                      Alert.alert('Basarili', response?.message || 'Tum veriler sifirlandi');
-                      await load();
-                    } catch {
-                      Alert.alert('Hata', 'Veri sifirlama basarisiz oldu');
-                    } finally {
-                      setResetting(false);
-                    }
-                  }
-                }
-              ]
-            );
-          }
-        }
-      ]
-    );
-  };
 
   const tiles: { label: string; key: keyof DashboardStats; color: string; bg: string }[] = [
     { label: 'Toplam Kullanici', key: 'totalUsers', color: '#2563eb', bg: '#eff6ff' },
@@ -72,6 +34,32 @@ export default function AdminStatsScreen({ navigation }: any) {
     { label: 'Toplam Gelir', key: 'totalRevenue', color: '#be123c', bg: '#fff1f2' },
     { label: 'Bugun Gelir', key: 'todayRevenue', color: '#7c2d12', bg: '#ffedd5' }
   ];
+
+    const handleResetAllData = () => {
+      Alert.alert(
+        'Tum Verileri Sifirla',
+        'Tum siparis, restoran, kurye, musteri ve finansal veriler silinecek. Admin hesaplari korunur. Devam etmek istiyor musunuz?',
+        [
+          { text: 'Iptal', style: 'cancel' },
+          {
+            text: 'Sifirla',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                setResetting(true);
+                const response = await adminService.resetAllData();
+                Alert.alert('Basarili', response?.message || 'Tum veriler sifirlandi');
+                await load();
+              } catch {
+                Alert.alert('Hata', 'Veri sifirlama basarisiz oldu');
+              } finally {
+                setResetting(false);
+              }
+            }
+          }
+        ]
+      );
+    };
 
   return (
     <ScrollView
@@ -89,13 +77,14 @@ export default function AdminStatsScreen({ navigation }: any) {
         </Pressable>
       </View>
 
-      <Pressable
-        style={[styles.resetBtn, resetting && styles.resetBtnDisabled]}
-        onPress={handleResetAllData}
-        disabled={resetting}
-      >
-        <Text style={styles.resetBtnText}>{resetting ? 'Sifirlaniyor...' : 'Tum Verileri Sifirla'}</Text>
-      </Pressable>
+
+        <Pressable
+          style={[styles.resetBtn, resetting && styles.resetBtnDisabled]}
+          onPress={handleResetAllData}
+          disabled={resetting}
+        >
+          <Text style={styles.resetBtnText}>{resetting ? 'Sifirlaniyor...' : 'Tum Verileri Sifirla'}</Text>
+        </Pressable>
 
       <View style={styles.quickRow}>
         <Pressable style={styles.quickCard} onPress={() => navigation.navigate('AdminUsers')}>
@@ -137,9 +126,10 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   actionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   actionText: { color: '#fff', fontWeight: '700' },
-  resetBtn: { backgroundColor: '#dc2626', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
-  resetBtnDisabled: { opacity: 0.6 },
-  resetBtnText: { color: '#fff', fontWeight: '700' },
+
+    resetBtn: { backgroundColor: '#dc2626', borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
+    resetBtnDisabled: { opacity: 0.6 },
+    resetBtnText: { color: '#fff', fontWeight: '700' },
   quickRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   quickCard: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   quickTitle: { color: '#0f172a', fontWeight: '700', fontSize: 13 },

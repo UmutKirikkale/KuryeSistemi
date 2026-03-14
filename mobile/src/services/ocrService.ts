@@ -49,8 +49,9 @@ export const ocrService = {
 
     const response = await api.post<OCRResponse>('/ocr/extract-order', formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      }
+        'Content-Type': undefined
+      },
+      timeout: 60000
     });
 
     return response.data;
