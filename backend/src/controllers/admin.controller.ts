@@ -769,20 +769,40 @@ export const resetAllData = async (req: AuthRequest, res: Response): Promise<any
       }
     };
 
+    const safeTruncate = async (tx: any, tableName: string) => {
+      try {
+        await tx.$executeRawUnsafe(`TRUNCATE TABLE \"${tableName}\" RESTART IDENTITY CASCADE`);
+      } catch (error: any) {
+        const code = String(error?.code || '');
+        const message = String(error?.message || '');
+        if (code === 'P2021' || code === 'P2022' || message.includes('does not exist')) {
+          console.warn(`resetAllData skipped truncate ${tableName}`);
+          return;
+        }
+        throw error;
+      }
+    };
+
     await prisma.$transaction(async (tx: any) => {
-      // Iliski bagimliliklarina gore sirali temizlik
-      await safeDeleteMany(() => tx.restaurantRating.deleteMany({}), 'restaurantRating');
-      await safeDeleteMany(() => tx.financialTransaction.deleteMany({}), 'financialTransaction');
-      await safeDeleteMany(() => tx.order.deleteMany({}), 'order');
-      await safeDeleteMany(() => tx.customerOrder.deleteMany({}), 'customerOrder');
-      await safeDeleteMany(() => tx.savedAddress.deleteMany({}), 'savedAddress');
-      await safeDeleteMany(() => tx.menuItem.deleteMany({}), 'menuItem');
-      await safeDeleteMany(() => tx.menuCategory.deleteMany({}), 'menuCategory');
-      await safeDeleteMany(() => tx.locationHistory.deleteMany({}), 'locationHistory');
-      await safeDeleteMany(() => tx.courierAvailabilityEvent.deleteMany({}), 'courierAvailabilityEvent');
-      await safeDeleteMany(() => tx.courierProfile.deleteMany({}), 'courierProfile');
-      await safeDeleteMany(() => tx.restaurant.deleteMany({}), 'restaurant');
-      await safeDeleteMany(() => tx.customer.deleteMany({}), 'customer');
+      // FK iliskilerini otomatik temizlemek icin truncate + cascade kullan
+      const tablesToTruncate = [
+        'restaurant_ratings',
+        'financial_transactions',
+        'orders',
+        'customer_orders',
+        'saved_addresses',
+        'menu_items',
+        'menu_categories',
+        'location_history',
+        'courier_availability_events',
+        'courier_profiles',
+        'restaurants',
+        'customers'
+      ];
+
+      for (const tableName of tablesToTruncate) {
+        await safeTruncate(tx, tableName);
+      }
 
       // Admin hesaplari korunur; diger tum kullanicilar silinir
       await safeDeleteMany(() => tx.user.deleteMany({
