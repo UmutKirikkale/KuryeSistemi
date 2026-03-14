@@ -91,7 +91,13 @@ export default function AdminRestaurantDetailScreen({ route, navigation }: any) 
 
       <View style={styles.formBox}>
         <Text style={styles.sectionTitle}>Restoran Ayarlari</Text>
-        <TextInput style={styles.input} value={commissionPerOrder} onChangeText={setCommissionPerOrder} placeholder="Siparis basi komisyon" keyboardType="decimal-pad" />
+        <Text style={styles.sectionHint}>Bu alandaki degisiklik siparis basi komisyon tutarini aninda gunceller.</Text>
+
+        <Text style={styles.fieldLabel}>Siparis Basi Komisyon (TL)</Text>
+        <TextInput style={styles.input} value={commissionPerOrder} onChangeText={setCommissionPerOrder} placeholder="Orn: 100" keyboardType="decimal-pad" />
+        <Text style={styles.fieldHint}>Her teslim edilen sipariste restorandan dusecek komisyon tutari.</Text>
+
+        <Text style={styles.fieldLabel}>Rapor Donemi</Text>
         <View style={styles.periodRow}>
           {(['daily', 'weekly', 'monthly'] as const).map((value) => (
             <Pressable key={value} style={[styles.periodChip, period === value && styles.periodChipActive]} onPress={() => setPeriod(value)}>
@@ -100,15 +106,16 @@ export default function AdminRestaurantDetailScreen({ route, navigation }: any) 
           ))}
         </View>
         <Pressable style={[styles.primaryButton, saving && styles.disabled]} onPress={handleSaveCommission} disabled={saving}>
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Komisyonu Kaydet</Text>}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Komisyon Degisikliklerini Kaydet</Text>}
         </Pressable>
         <Pressable style={[styles.dangerButton, deleting && styles.disabled]} onPress={handleDelete} disabled={deleting}>
-          {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Restorani Sil</Text>}
+          {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Restorani Kalici Olarak Sil</Text>}
         </Pressable>
       </View>
 
       <View style={styles.formBox}>
         <Text style={styles.sectionTitle}>Finansal Rapor</Text>
+        <Text style={styles.sectionHint}>Secilen doneme gore restoranin ciro, komisyon ve net gelir ozetini gosterir.</Text>
         {loadingReport ? (
           <ActivityIndicator color="#1d4ed8" />
         ) : !report ? (
@@ -135,7 +142,10 @@ const styles = StyleSheet.create({
   formBox: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16 },
   meta: { color: '#334155', fontSize: 14 },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 10 },
+  sectionHint: { color: '#64748b', fontSize: 12, marginBottom: 10 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
+  fieldHint: { color: '#64748b', fontSize: 12, marginTop: -4, marginBottom: 10 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   card: { width: '47%', borderRadius: 14, padding: 14 },
   cardLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },

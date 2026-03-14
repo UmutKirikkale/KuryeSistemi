@@ -85,19 +85,33 @@ export default function AdminCourierDetailScreen({ route, navigation }: any) {
 
       <View style={styles.formBox}>
         <Text style={styles.sectionTitle}>Kurye Duzenle</Text>
-        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Ad Soyad" />
-        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="Telefon" keyboardType="phone-pad" />
-        <TextInput style={styles.input} value={vehicleType} onChangeText={setVehicleType} placeholder="Arac tipi" />
-        <TextInput style={styles.input} value={paymentPerOrder} onChangeText={setPaymentPerOrder} placeholder="Siparis basi ucret" keyboardType="decimal-pad" />
+        <Text style={styles.sectionHint}>Bu alanlar kurye hesabini dogrudan gunceller. Degisiklikler aninda aktif olur.</Text>
+
+        <Text style={styles.fieldLabel}>Ad Soyad</Text>
+        <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Orn: Ahmet Yilmaz" />
+
+        <Text style={styles.fieldLabel}>Telefon</Text>
+        <TextInput style={styles.input} value={phone} onChangeText={setPhone} placeholder="05xx xxx xx xx" keyboardType="phone-pad" />
+
+        <Text style={styles.fieldLabel}>Arac Tipi</Text>
+        <TextInput style={styles.input} value={vehicleType} onChangeText={setVehicleType} placeholder="MOTORCYCLE / CAR / BICYCLE" />
+
+        <Text style={styles.fieldLabel}>Siparis Basi Ucret (TL)</Text>
+        <TextInput style={styles.input} value={paymentPerOrder} onChangeText={setPaymentPerOrder} placeholder="Orn: 100" keyboardType="decimal-pad" />
+        <Text style={styles.fieldHint}>Kurye her teslim edilen siparis icin bu tutari kazanir.</Text>
+
         <View style={styles.switchRow}>
-          <Text style={styles.switchLabel}>Musaitlik</Text>
+          <View style={{ flex: 1, marginRight: 8 }}>
+            <Text style={styles.switchLabel}>Musaitlik</Text>
+            <Text style={styles.fieldHint}>Musait kapaliysa kurye yeni siparis alamaz.</Text>
+          </View>
           <Switch value={isAvailable} onValueChange={setIsAvailable} />
         </View>
         <Pressable style={[styles.primaryButton, saving && styles.disabled]} onPress={handleSave} disabled={saving}>
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kaydet</Text>}
+          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Degisiklikleri Kaydet</Text>}
         </Pressable>
         <Pressable style={[styles.dangerButton, deleting && styles.disabled]} onPress={handleDelete} disabled={deleting}>
-          {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kuryeyi Sil</Text>}
+          {deleting ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kuryeyi Kalici Olarak Sil</Text>}
         </Pressable>
       </View>
 
@@ -129,7 +143,10 @@ const styles = StyleSheet.create({
   metaBox: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16, gap: 6 },
   formBox: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 16 },
   meta: { color: '#334155', fontSize: 14 },
+  sectionHint: { color: '#64748b', fontSize: 12, marginBottom: 12 },
+  fieldLabel: { fontSize: 13, fontWeight: '700', color: '#334155', marginBottom: 6 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 10 },
+  fieldHint: { color: '#64748b', fontSize: 12, marginTop: -4, marginBottom: 10 },
   switchRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   switchLabel: { fontWeight: '600', color: '#0f172a' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 18 },

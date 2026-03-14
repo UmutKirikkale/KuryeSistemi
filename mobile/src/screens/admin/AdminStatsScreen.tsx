@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { adminService, DashboardStats } from '../../services/adminService';
 import AdminHeader from '../../components/AdminHeader';
 
-export default function AdminStatsScreen() {
+export default function AdminStatsScreen({ navigation }: any) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -40,6 +40,15 @@ export default function AdminStatsScreen() {
     >
       <AdminHeader title="Admin Dashboard" subtitle="Mobil yonetim paneli" />
 
+      <View style={styles.actionsRow}>
+        <Pressable style={[styles.actionBtn, { backgroundColor: '#7c3aed' }]} onPress={() => navigation.navigate('AdminCreateCourier')}>
+          <Text style={styles.actionText}>+ Yeni Kurye</Text>
+        </Pressable>
+        <Pressable style={[styles.actionBtn, { backgroundColor: '#1d4ed8' }]} onPress={() => navigation.navigate('AdminCreateRestaurant')}>
+          <Text style={styles.actionText}>+ Yeni Restoran</Text>
+        </Pressable>
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={{ marginTop: 40 }} />
       ) : !stats ? (
@@ -62,6 +71,9 @@ export default function AdminStatsScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#f1f5f9', padding: 16 },
+  actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  actionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
+  actionText: { color: '#fff', fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { width: '47%', borderRadius: 14, padding: 16 },
   tileLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },
