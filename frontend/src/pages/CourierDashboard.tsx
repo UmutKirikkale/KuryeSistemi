@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useOrderStore } from '../store/orderStore';
 import { useLocationStore } from '../store/locationStore';
@@ -24,16 +24,18 @@ export default function CourierDashboard() {
   const [settlementReport, setSettlementReport] = useState<any>(null);
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [closingSettlement, setClosingSettlement] = useState(false);
+  const [orderPeriod, setOrderPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [settlementDate, setSettlementDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
+  const periodRef = useRef<'daily' | 'weekly' | 'monthly'>('daily');
   const [isAvailable, setIsAvailable] = useState(
     user?.courierProfile?.isAvailable || false
   );
 
   useEffect(() => {
     // Siparişleri yükle
-    fetchOrders();
+    fetchOrders({ limit: 100, period: periodRef.current });
 
     // Kazançları yükle
     loadEarnings();
@@ -41,12 +43,12 @@ export default function CourierDashboard() {
 
     // WebSocket dinleyicilerini kur
     wsService.onOrderStatusUpdate(() => {
-      fetchOrders();
+      fetchOrders({ limit: 100, period: periodRef.current });
     });
 
     wsService.onNewOrder(() => {
       // Yeni sipariş bildirimi
-      fetchOrders();
+      fetchOrders({ limit: 100, period: periodRef.current });
     });
 
     return () => {
@@ -57,6 +59,11 @@ export default function CourierDashboard() {
   useEffect(() => {
     loadSettlementReport(settlementDate);
   }, [settlementDate]);
+
+  useEffect(() => {
+    periodRef.current = orderPeriod;
+    fetchOrders({ limit: 100, period: orderPeriod });
+  }, [fetchOrders, orderPeriod]);
 
   const loadEarnings = async () => {
     try {
@@ -298,7 +305,35 @@ export default function CourierDashboard() {
 
         {/* Orders */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-xl font-semibold mb-6">Siparişler</h2>
+          <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+            <h2 className="text-xl font-semibold">Siparişler</h2>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setOrderPeriod('daily')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  orderPeriod === 'daily' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Günlük
+              </button>
+              <button
+                onClick={() => setOrderPeriod('weekly')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  orderPeriod === 'weekly' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Haftalık
+              </button>
+              <button
+                onClick={() => setOrderPeriod('monthly')}
+                className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  orderPeriod === 'monthly' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                Aylık
+              </button>
+            </div>
+          </div>
           <OrderList orders={myOrders} role="COURIER" />
         </div>
       </div>

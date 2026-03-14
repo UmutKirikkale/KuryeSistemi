@@ -252,6 +252,7 @@ export default function AdminDashboard() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<Restaurant | null>(null);
   const [financialReport, setFinancialReport] = useState<FinancialReport | null>(null);
   const [reportPeriod, setReportPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [recentOrdersPeriod, setRecentOrdersPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [newCommission, setNewCommission] = useState<number>(0);
   const [systemSettings, setSystemSettings] = useState<SystemSettings | null>(null);
   const [autoBusyAfterOrders, setAutoBusyAfterOrders] = useState<number>(4);
@@ -401,10 +402,8 @@ export default function AdminDashboard() {
       // Son kullanıcıları al
       const { users } = await adminService.getAllUsers({ limit: 5 });
       setRecentUsers(users);
-      
-      // Son siparişleri al
-      const { orders } = await adminService.getAllOrders({ limit: 5 });
-      setRecentOrders(orders);
+
+      await fetchRecentOrders(recentOrdersPeriod);
       
       setLoading(false);
     } catch (error) {
@@ -412,6 +411,20 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
+
+  const fetchRecentOrders = async (period: 'daily' | 'weekly' | 'monthly') => {
+    try {
+      const { orders } = await adminService.getAllOrders({ limit: 5, period });
+      setRecentOrders(orders);
+    } catch (error) {
+      console.error('Son siparisler yuklenemedi:', error);
+      setRecentOrders([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecentOrders(recentOrdersPeriod);
+  }, [recentOrdersPeriod]);
 
   const fetchCouriers = async () => {
     try {
@@ -918,10 +931,38 @@ export default function AdminDashboard() {
 
           {/* Recent Orders */}
           <div className="bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-              <Package className="w-5 h-5 mr-2 text-green-600" />
-              Son Siparişler
-            </h3>
+            <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center">
+                <Package className="w-5 h-5 mr-2 text-green-600" />
+                Son Siparişler
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setRecentOrdersPeriod('daily')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    recentOrdersPeriod === 'daily' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Günlük
+                </button>
+                <button
+                  onClick={() => setRecentOrdersPeriod('weekly')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    recentOrdersPeriod === 'weekly' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Haftalık
+                </button>
+                <button
+                  onClick={() => setRecentOrdersPeriod('monthly')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    recentOrdersPeriod === 'monthly' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  Aylık
+                </button>
+              </div>
+            </div>
             {recentOrders.length === 0 ? (
               <div className="text-center py-8">
                 <Package className="w-12 h-12 text-gray-300 mx-auto mb-3" />

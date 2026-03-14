@@ -22,7 +22,7 @@ export const adminService = {
     return response.data;
   },
 
-  getAllOrders: async (params?: { page?: number; limit?: number; status?: string }) => {
+  getAllOrders: async (params?: { page?: number; limit?: number; status?: string; period?: 'daily' | 'weekly' | 'monthly' }) => {
     const response = await api.get('/admin/orders', { params });
     return response.data;
   },

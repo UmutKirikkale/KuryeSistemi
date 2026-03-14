@@ -42,11 +42,12 @@ export default function CourierOrdersScreen() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState<boolean>(false);
   const [filter, setFilter] = useState<'ALL' | 'POOL' | 'MINE' | 'COMPLETED'>('ALL');
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [query, setQuery] = useState('');
 
   const loadOrders = useCallback(async () => {
     try {
-      const data = await orderService.getOrders({ limit: 50 });
+      const data = await orderService.getOrders({ limit: 50, period });
       setOrders(data.orders);
     } catch {
       Alert.alert('Hata', 'Siparisler yuklenemedi');
@@ -54,7 +55,7 @@ export default function CourierOrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [period]);
 
   useEffect(() => {
     loadOrders();
@@ -221,6 +222,18 @@ export default function CourierOrdersScreen() {
           <Text style={styles.summaryLabel}>Bendeki Siparis</Text>
           <Text style={[styles.summaryValue, { color: '#16a34a' }]}>{orders.filter((o) => o.courier?.id === user?.id).length}</Text>
         </View>
+      </View>
+
+      <View style={styles.filterRow}>
+        <Pressable style={[styles.filterChip, period === 'daily' && styles.filterChipActive]} onPress={() => setPeriod('daily')}>
+          <Text style={[styles.filterText, period === 'daily' && styles.filterTextActive]}>Gunluk</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, period === 'weekly' && styles.filterChipActive]} onPress={() => setPeriod('weekly')}>
+          <Text style={[styles.filterText, period === 'weekly' && styles.filterTextActive]}>Haftalik</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, period === 'monthly' && styles.filterChipActive]} onPress={() => setPeriod('monthly')}>
+          <Text style={[styles.filterText, period === 'monthly' && styles.filterTextActive]}>Aylik</Text>
+        </Pressable>
       </View>
 
       <View style={styles.filterRow}>

@@ -60,6 +60,26 @@ export const adminService = {
     };
   },
 
+  getAllOrders: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    period?: 'daily' | 'weekly' | 'monthly';
+  }) => {
+    const response = await api.get('/admin/orders', { params });
+    return response.data as {
+      orders: Array<{
+        id: string;
+        orderNumber: string;
+        status: string;
+        orderAmount: number;
+        createdAt: string;
+        restaurant?: { name?: string };
+      }>;
+      pagination: any;
+    };
+  },
+
   getAllCouriers: async () => {
     const response = await api.get('/admin/couriers');
     return response.data;

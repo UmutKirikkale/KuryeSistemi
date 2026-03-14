@@ -47,7 +47,7 @@ export interface CreateOrderData {
 }
 
 export const orderService = {
-  getOrders: async (params?: { status?: string; page?: number; limit?: number }) => {
+  getOrders: async (params?: { status?: string; page?: number; limit?: number; period?: 'daily' | 'weekly' | 'monthly' }) => {
     const response = await api.get<{ orders: Order[]; pagination: any }>('/orders', { params });
     return response.data;
   },

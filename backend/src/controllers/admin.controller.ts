@@ -203,7 +203,7 @@ export const getAllOrders = async (req: AuthRequest, res: Response): Promise<any
       throw new AppError('Access denied', 403);
     }
 
-    const { page = '1', limit = '20', status } = req.query;
+    const { page = '1', limit = '20', status, period } = req.query;
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
     const skip = (pageNum - 1) * limitNum;
@@ -211,6 +211,33 @@ export const getAllOrders = async (req: AuthRequest, res: Response): Promise<any
     const whereClause: any = {};
     if (status && status !== 'ALL') {
       whereClause.status = status;
+    }
+
+    const now = new Date();
+    const selectedPeriod = typeof period === 'string' ? period : undefined;
+    if (selectedPeriod === 'daily') {
+      const dayStart = new Date(now);
+      dayStart.setHours(0, 0, 0, 0);
+      const nextDay = new Date(dayStart);
+      nextDay.setDate(nextDay.getDate() + 1);
+      whereClause.createdAt = {
+        gte: dayStart,
+        lt: nextDay
+      };
+    } else if (selectedPeriod === 'weekly') {
+      const weekStart = new Date(now);
+      weekStart.setHours(0, 0, 0, 0);
+      weekStart.setDate(weekStart.getDate() - 6);
+      whereClause.createdAt = {
+        gte: weekStart,
+        lte: now
+      };
+    } else if (selectedPeriod === 'monthly') {
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      whereClause.createdAt = {
+        gte: monthStart,
+        lte: now
+      };
     }
 
     const orders = await prisma.order.findMany({

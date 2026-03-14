@@ -3,11 +3,27 @@ import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleS
 import { adminService, DashboardStats } from '../../services/adminService';
 import AdminHeader from '../../components/AdminHeader';
 
+type OrderPeriod = 'daily' | 'weekly' | 'monthly';
+
+interface RecentOrder {
+  id: string;
+  orderNumber: string;
+  status: string;
+  orderAmount: number;
+  createdAt: string;
+  restaurant?: {
+    name?: string;
+  };
+}
+
 export default function AdminStatsScreen({ navigation }: any) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [orderPeriod, setOrderPeriod] = useState<OrderPeriod>('daily');
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -22,6 +38,22 @@ export default function AdminStatsScreen({ navigation }: any) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const loadRecentOrders = useCallback(async (period: OrderPeriod) => {
+    try {
+      setOrdersLoading(true);
+      const data = await adminService.getAllOrders({ limit: 6, period });
+      setRecentOrders(data.orders || []);
+    } catch {
+      setRecentOrders([]);
+    } finally {
+      setOrdersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecentOrders(orderPeriod);
+  }, [loadRecentOrders, orderPeriod]);
 
 
   const tiles: { label: string; key: keyof DashboardStats; color: string; bg: string }[] = [
@@ -50,6 +82,7 @@ export default function AdminStatsScreen({ navigation }: any) {
                 const response = await adminService.resetAllData();
                 Alert.alert('Basarili', response?.message || 'Tum veriler sifirlandi');
                 await load();
+                await loadRecentOrders(orderPeriod);
               } catch {
                 Alert.alert('Hata', 'Veri sifirlama basarisiz oldu');
               } finally {
@@ -64,7 +97,7 @@ export default function AdminStatsScreen({ navigation }: any) {
   return (
     <ScrollView
       style={styles.root}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); loadRecentOrders(orderPeriod); }} />}
     >
       <AdminHeader title="Admin Dashboard" subtitle="Mobil yonetim paneli" />
 
@@ -117,6 +150,47 @@ export default function AdminStatsScreen({ navigation }: any) {
           ))}
         </View>
       )}
+
+      <View style={styles.ordersCard}>
+        <View style={styles.ordersHeader}>
+          <Text style={styles.ordersTitle}>Son Siparisler</Text>
+          <View style={styles.periodRow}>
+            <Pressable style={[styles.periodChip, orderPeriod === 'daily' && styles.periodChipActive]} onPress={() => setOrderPeriod('daily')}>
+              <Text style={[styles.periodText, orderPeriod === 'daily' && styles.periodTextActive]}>Gunluk</Text>
+            </Pressable>
+            <Pressable style={[styles.periodChip, orderPeriod === 'weekly' && styles.periodChipActive]} onPress={() => setOrderPeriod('weekly')}>
+              <Text style={[styles.periodText, orderPeriod === 'weekly' && styles.periodTextActive]}>Haftalik</Text>
+            </Pressable>
+            <Pressable style={[styles.periodChip, orderPeriod === 'monthly' && styles.periodChipActive]} onPress={() => setOrderPeriod('monthly')}>
+              <Text style={[styles.periodText, orderPeriod === 'monthly' && styles.periodTextActive]}>Aylik</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {ordersLoading ? (
+          <ActivityIndicator size="small" color="#16a34a" style={{ marginVertical: 16 }} />
+        ) : recentOrders.length === 0 ? (
+          <Text style={styles.ordersEmpty}>Secili donemde siparis yok</Text>
+        ) : (
+          <View style={styles.orderList}>
+            {recentOrders.map((order) => (
+              <View key={order.id} style={styles.orderItem}>
+                <View>
+                  <Text style={styles.orderNo}>{order.orderNumber}</Text>
+                  <Text style={styles.orderMeta}>{order.restaurant?.name || 'Restoran yok'}</Text>
+                  <Text style={styles.orderMeta}>
+                    {new Date(order.createdAt).toLocaleDateString('tr-TR')} {new Date(order.createdAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.orderAmount}>{order.orderAmount.toFixed(2)} ₺</Text>
+                  <Text style={styles.orderStatus}>{order.status}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
     </ScrollView>
   );
 }
@@ -138,5 +212,20 @@ const styles = StyleSheet.create({
   tile: { width: '47%', borderRadius: 14, padding: 16 },
   tileLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },
   tileValue: { fontSize: 28, fontWeight: '800' },
+  ordersCard: { marginTop: 14, backgroundColor: '#fff', borderRadius: 14, borderWidth: 1, borderColor: '#e2e8f0', padding: 12, marginBottom: 20 },
+  ordersHeader: { gap: 8, marginBottom: 8 },
+  ordersTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a' },
+  periodRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  periodChip: { backgroundColor: '#e2e8f0', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 6 },
+  periodChipActive: { backgroundColor: '#16a34a' },
+  periodText: { fontSize: 12, fontWeight: '700', color: '#334155' },
+  periodTextActive: { color: '#fff' },
+  ordersEmpty: { color: '#64748b', fontSize: 13, textAlign: 'center', marginVertical: 10 },
+  orderList: { gap: 8 },
+  orderItem: { flexDirection: 'row', justifyContent: 'space-between', padding: 10, borderRadius: 10, backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0' },
+  orderNo: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  orderMeta: { fontSize: 11, color: '#64748b', marginTop: 2 },
+  orderAmount: { fontSize: 13, fontWeight: '700', color: '#0f766e' },
+  orderStatus: { fontSize: 11, color: '#475569', marginTop: 2 },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 60 }
 });
