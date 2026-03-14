@@ -221,14 +221,6 @@ const defaultPlatformCommissionTemplates: SystemSettings['platformCommissionTemp
   DIGER: 20
 };
 
-const platformLabels: Record<keyof SystemSettings['platformCommissionTemplates'], string> = {
-  YEMEKSEPETI: 'Yemeksepeti',
-  FEEDME: 'Feedme',
-  GETIRYEMEK: 'GetirYemek',
-  TRENDYOLYEMEK: 'TrendyolYemek',
-  DIGER: 'Diğer'
-};
-
 export default function AdminDashboard() {
   const { user, logout } = useAuthStore();
   const { courierLocations, updateCourierLocation, setCourierLocations } = useLocationStore();
