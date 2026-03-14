@@ -1,11 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { financialService } from '../../services/financialService';
 
 export default function RestaurantFinancialScreen() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [filter, setFilter] = useState<'ALL' | 'INCOME' | 'COMMISSION'>('ALL');
+  const [query, setQuery] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -28,6 +30,23 @@ export default function RestaurantFinancialScreen() {
     totalCommissions: Number(data?.summary?.totalCommissions || 0),
     netBalance: Number(data?.summary?.netBalance || 0)
   };
+
+  const visibleTransactions = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const byType = transactions.filter((transaction: any) => {
+      if (filter === 'INCOME') return Number(transaction.amount || 0) >= 0;
+      if (filter === 'COMMISSION') return Number(transaction.amount || 0) < 0 || String(transaction.transactionType || '').toLowerCase().includes('commission');
+      return true;
+    });
+
+    if (!normalizedQuery) return byType;
+
+    return byType.filter((transaction: any) => {
+      const haystack = `${transaction.order?.orderNumber || ''} ${transaction.description || ''} ${transaction.transactionType || ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [transactions, filter, query]);
 
   return (
     <ScrollView
@@ -62,8 +81,25 @@ export default function RestaurantFinancialScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Islem Gecmisi</Text>
-          {transactions.length === 0 && <Text style={styles.empty}>Henuz finansal islem yok</Text>}
-          {transactions.map((transaction: any) => (
+          <View style={styles.filterRow}>
+            <Pressable style={[styles.filterChip, filter === 'ALL' && styles.filterChipActive]} onPress={() => setFilter('ALL')}>
+              <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>Tum</Text>
+            </Pressable>
+            <Pressable style={[styles.filterChip, filter === 'INCOME' && styles.filterChipActive]} onPress={() => setFilter('INCOME')}>
+              <Text style={[styles.filterText, filter === 'INCOME' && styles.filterTextActive]}>Gelir</Text>
+            </Pressable>
+            <Pressable style={[styles.filterChip, filter === 'COMMISSION' && styles.filterChipActive]} onPress={() => setFilter('COMMISSION')}>
+              <Text style={[styles.filterText, filter === 'COMMISSION' && styles.filterTextActive]}>Komisyon</Text>
+            </Pressable>
+          </View>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Siparis no, aciklama veya tur ara"
+            value={query}
+            onChangeText={setQuery}
+          />
+          {visibleTransactions.length === 0 && <Text style={styles.empty}>Filtreye uygun finansal islem yok</Text>}
+          {visibleTransactions.map((transaction: any) => (
             <View key={transaction.id} style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowMain}>{transaction.order?.orderNumber || transaction.transactionType}</Text>
@@ -90,6 +126,12 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   statValue: { fontSize: 20, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 10 },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  filterChip: { backgroundColor: '#e2e8f0', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 },
+  filterChipActive: { backgroundColor: '#1d4ed8' },
+  filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
+  filterTextActive: { color: '#fff' },
+  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   row: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   rowMain: { fontWeight: '600', color: '#0f172a' },
   rowSub: { fontSize: 12, color: '#64748b' },

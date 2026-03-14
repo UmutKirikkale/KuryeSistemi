@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { financialService } from '../../services/financialService';
 
@@ -9,6 +9,7 @@ export default function CourierEarningsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [settlementDate, setSettlementDate] = useState(new Date().toISOString().slice(0, 10));
   const [closing, setClosing] = useState(false);
+  const [deliveryQuery, setDeliveryQuery] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -42,6 +43,16 @@ export default function CourierEarningsScreen() {
     }
   };
 
+  const visibleDeliveries = useMemo(() => {
+    if (!data?.orders) return [];
+    const normalizedQuery = deliveryQuery.trim().toLowerCase();
+    if (!normalizedQuery) return data.orders;
+    return data.orders.filter((item: any) => {
+      const haystack = `${item.restaurantName || ''} ${item.orderNumber || ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [data?.orders, deliveryQuery]);
+
   return (
     <ScrollView
       style={styles.root}
@@ -71,8 +82,14 @@ export default function CourierEarningsScreen() {
           </View>
 
           <Text style={styles.sectionTitle}>Son Teslimatlar</Text>
+          <TextInput
+            style={styles.searchInput}
+            value={deliveryQuery}
+            onChangeText={setDeliveryQuery}
+            placeholder="Restoran veya siparis no ara"
+          />
           {data.orders.length === 0 && <Text style={styles.empty}>Henuz teslimat yok</Text>}
-          {data.orders.map((o: any) => (
+          {visibleDeliveries.map((o: any) => (
             <View key={o.orderId} style={styles.row}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.rowMain}>{o.restaurantName}</Text>
@@ -131,6 +148,7 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: '#64748b', marginBottom: 4 },
   statValue: { fontSize: 22, fontWeight: '700' },
   sectionTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a', marginBottom: 10 },
+  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   dateInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 12 },
   row: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   rowMain: { fontWeight: '600', color: '#0f172a' },

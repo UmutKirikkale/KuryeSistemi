@@ -49,6 +49,21 @@ export default function AdminStatsScreen({ navigation }: any) {
         </Pressable>
       </View>
 
+      <View style={styles.quickRow}>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('AdminUsers')}>
+          <Text style={styles.quickTitle}>Kullanicilar</Text>
+          <Text style={styles.quickSub}>Hesap yonetimi</Text>
+        </Pressable>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('AdminCouriers')}>
+          <Text style={styles.quickTitle}>Kuryeler</Text>
+          <Text style={styles.quickSub}>Performans ve durum</Text>
+        </Pressable>
+        <Pressable style={styles.quickCard} onPress={() => navigation.navigate('AdminRestaurants')}>
+          <Text style={styles.quickTitle}>Restoranlar</Text>
+          <Text style={styles.quickSub}>Komisyon ve finans</Text>
+        </Pressable>
+      </View>
+
       {loading ? (
         <ActivityIndicator size="large" color="#7c3aed" style={{ marginTop: 40 }} />
       ) : !stats ? (
@@ -74,6 +89,10 @@ const styles = StyleSheet.create({
   actionsRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
   actionBtn: { flex: 1, paddingVertical: 12, borderRadius: 12, alignItems: 'center' },
   actionText: { color: '#fff', fontWeight: '700' },
+  quickRow: { flexDirection: 'row', gap: 10, marginBottom: 12 },
+  quickCard: { flex: 1, backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e2e8f0' },
+  quickTitle: { color: '#0f172a', fontWeight: '700', fontSize: 13 },
+  quickSub: { color: '#64748b', fontSize: 11, marginTop: 4 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   tile: { width: '47%', borderRadius: 14, padding: 16 },
   tileLabel: { fontSize: 12, color: '#64748b', marginBottom: 6 },

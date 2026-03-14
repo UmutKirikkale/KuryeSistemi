@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
@@ -48,6 +49,8 @@ export default function RestaurantOrdersScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'DELIVERED' | 'CANCELLED'>('ALL');
+  const [query, setQuery] = useState('');
 
   const loadOrders = useCallback(async () => {
     try {
@@ -66,6 +69,24 @@ export default function RestaurantOrdersScreen() {
     const interval = setInterval(loadOrders, 15000);
     return () => clearInterval(interval);
   }, [loadOrders]);
+
+  const visibleOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const filteredByTab = orders.filter((order) => {
+      if (filter === 'ACTIVE') return ['PENDING', 'APPROVED', 'PREPARING', 'ASSIGNED', 'PICKED_UP'].includes(order.status);
+      if (filter === 'DELIVERED') return order.status === 'DELIVERED';
+      if (filter === 'CANCELLED') return order.status === 'CANCELLED';
+      return true;
+    });
+
+    if (!normalizedQuery) return filteredByTab;
+
+    return filteredByTab.filter((order) => {
+      const haystack = `${order.orderNumber} ${order.customerName} ${order.deliveryAddress}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [orders, filter, query]);
 
   const handleCancel = (orderId: string) => {
     Alert.alert('Siparisi Iptal Et', 'Bu siparisi iptal etmek istediginizden emin misiniz?', [
@@ -162,11 +183,33 @@ export default function RestaurantOrdersScreen() {
         </View>
       </View>
 
+      <View style={styles.filterRow}>
+        <Pressable style={[styles.filterChip, filter === 'ALL' && styles.filterChipActive]} onPress={() => setFilter('ALL')}>
+          <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>Tum</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'ACTIVE' && styles.filterChipActive]} onPress={() => setFilter('ACTIVE')}>
+          <Text style={[styles.filterText, filter === 'ACTIVE' && styles.filterTextActive]}>Aktif</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'DELIVERED' && styles.filterChipActive]} onPress={() => setFilter('DELIVERED')}>
+          <Text style={[styles.filterText, filter === 'DELIVERED' && styles.filterTextActive]}>Teslim</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'CANCELLED' && styles.filterChipActive]} onPress={() => setFilter('CANCELLED')}>
+          <Text style={[styles.filterText, filter === 'CANCELLED' && styles.filterTextActive]}>Iptal</Text>
+        </Pressable>
+      </View>
+
+      <TextInput
+        style={styles.searchInput}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Siparis no, musteri veya adres ara"
+      />
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#1d4ed8" />
       ) : (
         <FlatList
-          data={orders}
+          data={visibleOrders}
           keyExtractor={(o) => o.id}
           renderItem={renderOrder}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadOrders(); }} />}
@@ -198,6 +241,12 @@ const styles = StyleSheet.create({
   summaryCard: { width: '31%', borderRadius: 12, padding: 12 },
   summaryLabel: { fontSize: 11, color: '#64748b' },
   summaryValue: { fontSize: 18, fontWeight: '700', marginTop: 4 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 12, marginTop: 4 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#e2e8f0' },
+  filterChipActive: { backgroundColor: '#1d4ed8' },
+  filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
+  filterTextActive: { color: '#fff' },
+  searchInput: { marginHorizontal: 12, marginTop: 10, marginBottom: 2, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

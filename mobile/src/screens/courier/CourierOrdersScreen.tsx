@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -7,6 +7,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
@@ -40,6 +41,8 @@ export default function CourierOrdersScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState<boolean>(false);
+  const [filter, setFilter] = useState<'ALL' | 'POOL' | 'MINE' | 'COMPLETED'>('ALL');
+  const [query, setQuery] = useState('');
 
   const loadOrders = useCallback(async () => {
     try {
@@ -58,6 +61,24 @@ export default function CourierOrdersScreen() {
     const interval = setInterval(loadOrders, 15000);
     return () => clearInterval(interval);
   }, [loadOrders]);
+
+  const visibleOrders = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    const filteredByTab = orders.filter((order) => {
+      if (filter === 'POOL') return ['PENDING', 'APPROVED', 'PREPARING'].includes(order.status);
+      if (filter === 'MINE') return order.courier?.id === user?.id;
+      if (filter === 'COMPLETED') return order.status === 'DELIVERED';
+      return true;
+    });
+
+    if (!normalizedQuery) return filteredByTab;
+
+    return filteredByTab.filter((order) => {
+      const haystack = `${order.orderNumber} ${order.customerName} ${order.deliveryAddress}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [orders, filter, query, user?.id]);
 
   const handleToggleAvailability = async () => {
     try {
@@ -202,11 +223,33 @@ export default function CourierOrdersScreen() {
         </View>
       </View>
 
+      <View style={styles.filterRow}>
+        <Pressable style={[styles.filterChip, filter === 'ALL' && styles.filterChipActive]} onPress={() => setFilter('ALL')}>
+          <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>Tum</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'POOL' && styles.filterChipActive]} onPress={() => setFilter('POOL')}>
+          <Text style={[styles.filterText, filter === 'POOL' && styles.filterTextActive]}>Havuz</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'MINE' && styles.filterChipActive]} onPress={() => setFilter('MINE')}>
+          <Text style={[styles.filterText, filter === 'MINE' && styles.filterTextActive]}>Benimkiler</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, filter === 'COMPLETED' && styles.filterChipActive]} onPress={() => setFilter('COMPLETED')}>
+          <Text style={[styles.filterText, filter === 'COMPLETED' && styles.filterTextActive]}>Teslim</Text>
+        </Pressable>
+      </View>
+
+      <TextInput
+        style={styles.searchInput}
+        value={query}
+        onChangeText={setQuery}
+        placeholder="Siparis no, musteri veya adres ara"
+      />
+
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#0f766e" />
       ) : (
         <FlatList
-          data={orders}
+          data={visibleOrders}
           keyExtractor={(o) => o.id}
           renderItem={renderOrder}
           refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadOrders(); }} />}
@@ -243,6 +286,12 @@ const styles = StyleSheet.create({
   summaryCard: { flex: 1, borderRadius: 12, padding: 12 },
   summaryLabel: { fontSize: 12, color: '#64748b' },
   summaryValue: { fontSize: 20, fontWeight: '700', marginTop: 4 },
+  filterRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 12, marginTop: 10 },
+  filterChip: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, backgroundColor: '#e2e8f0' },
+  filterChipActive: { backgroundColor: '#0f766e' },
+  filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
+  filterTextActive: { color: '#fff' },
+  searchInput: { marginHorizontal: 12, marginTop: 10, marginBottom: 2, backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
