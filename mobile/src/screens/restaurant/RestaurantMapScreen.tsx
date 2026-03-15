@@ -114,10 +114,7 @@ export default function RestaurantMapScreen() {
   };
 
   return (
-    <ScrollView
-      style={styles.root}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
-    >
+    <View style={styles.root}>
       <Text style={styles.title}>Canli Kurye Takibi</Text>
       <Text style={styles.subtitle}>Restoran ve kuryeleri harita uzerinden canli takip edin</Text>
 
@@ -125,8 +122,8 @@ export default function RestaurantMapScreen() {
         <ActivityIndicator size="large" color="#1d4ed8" style={{ marginTop: 40 }} />
       ) : (
         <>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Harita Gorunumu</Text>
+          {/* Harita - ScrollView DISINDA, cokme olmaz */}
+          <View style={styles.mapContainer}>
             <MapView
               style={styles.map}
               initialRegion={getInitialRegion()}
@@ -137,18 +134,10 @@ export default function RestaurantMapScreen() {
                 const coordinate = event?.nativeEvent?.coordinate;
                 const nextLat = Number(coordinate?.latitude);
                 const nextLng = Number(coordinate?.longitude);
-
-                if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
-                  return;
-                }
-
+                if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) return;
                 setLatitude(nextLat.toFixed(6));
                 setLongitude(nextLng.toFixed(6));
-                setProfile((prev: any) => ({
-                  ...(prev || {}),
-                  latitude: nextLat,
-                  longitude: nextLng
-                }));
+                setProfile((prev: any) => ({ ...(prev || {}), latitude: nextLat, longitude: nextLng }));
               }}
             >
               {markerCoordinate && (
@@ -162,95 +151,90 @@ export default function RestaurantMapScreen() {
                     const coordinate = event?.nativeEvent?.coordinate;
                     const nextLat = Number(coordinate?.latitude);
                     const nextLng = Number(coordinate?.longitude);
-
-                    if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
-                      return;
-                    }
-
+                    if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) return;
                     setLatitude(nextLat.toFixed(6));
                     setLongitude(nextLng.toFixed(6));
-                    setProfile((prev: any) => ({
-                      ...(prev || {}),
-                      latitude: nextLat,
-                      longitude: nextLng
-                    }));
+                    setProfile((prev: any) => ({ ...(prev || {}), latitude: nextLat, longitude: nextLng }));
                   }}
                 />
               )}
-
-              {couriers.map((courier) => (
-                <Marker
-                  key={courier.courierId}
-                  coordinate={{ latitude: Number(courier.latitude), longitude: Number(courier.longitude) }}
-                  title={courier.courierName || 'Kurye'}
-                  description={courier.updatedAt ? `Guncelleme: ${new Date(courier.updatedAt).toLocaleTimeString('tr-TR')}` : 'Canli'}
-                  pinColor="#1d4ed8"
-                />
-              ))}
+              {couriers
+                .filter((c) => Number.isFinite(Number(c.latitude)) && Number.isFinite(Number(c.longitude)))
+                .map((courier) => (
+                  <Marker
+                    key={courier.courierId}
+                    coordinate={{ latitude: Number(courier.latitude), longitude: Number(courier.longitude) }}
+                    title={courier.courierName || 'Kurye'}
+                    description={courier.updatedAt ? `Guncelleme: ${new Date(courier.updatedAt).toLocaleTimeString('tr-TR')}` : 'Canli'}
+                    pinColor="#1d4ed8"
+                  />
+                ))}
             </MapView>
-            <Text style={styles.meta}>Kirmizi: Restoran, Mavi: Kurye</Text>
-            <Text style={styles.meta}>Konumu degistirmek icin haritaya dokun veya kirmizi pini surukle.</Text>
+            <Text style={styles.mapHint}>Kirmizi: Restoran  |  Mavi: Kurye  —  Konumu degistirmek icin haritaya dokun</Text>
           </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Restoran Konumu</Text>
-            <Text style={styles.meta}>Adres: {profile?.address || '-'}</Text>
-            <View style={styles.rowInputs}>
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                placeholder="Latitude"
-                value={latitude}
-                onChangeText={setLatitude}
-                keyboardType="decimal-pad"
-              />
-              <TextInput
-                style={[styles.input, styles.halfInput]}
-                placeholder="Longitude"
-                value={longitude}
-                onChangeText={setLongitude}
-                keyboardType="decimal-pad"
-              />
+          {/* Geri kalan icerik scroll edilebilir */}
+          <ScrollView
+            style={styles.scrollContent}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); }} />}
+          >
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Restoran Konumu</Text>
+              <Text style={styles.meta}>Adres: {profile?.address || '-'}</Text>
+              <View style={styles.rowInputs}>
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="Latitude"
+                  value={latitude}
+                  onChangeText={setLatitude}
+                  keyboardType="decimal-pad"
+                />
+                <TextInput
+                  style={[styles.input, styles.halfInput]}
+                  placeholder="Longitude"
+                  value={longitude}
+                  onChangeText={setLongitude}
+                  keyboardType="decimal-pad"
+                />
+              </View>
+              <Pressable style={[styles.primaryButton, saving && styles.disabled]} onPress={handleSaveLocation} disabled={saving}>
+                <Text style={styles.primaryText}>{saving ? 'Kaydediliyor...' : 'Konumu Guncelle'}</Text>
+              </Pressable>
             </View>
-            <Pressable style={[styles.primaryButton, saving && styles.disabled]} onPress={handleSaveLocation} disabled={saving}>
-              <Text style={styles.primaryText}>{saving ? 'Kaydediliyor...' : 'Konumu Guncelle'}</Text>
-            </Pressable>
-          </View>
 
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Aktif Kuryeler</Text>
-            <Text style={styles.meta}>Toplam aktif/izlenen kurye: {couriers.length}</Text>
-            {couriers.length === 0 ? (
-              <Text style={styles.empty}>Su an aktif konum paylaşan kurye yok</Text>
-            ) : (
-              couriers.map((courier) => (
-                <View key={courier.courierId} style={styles.courierCard}>
-                  <View style={styles.courierHeader}>
-                    <Text style={styles.courierName}>{courier.courierName || 'Kurye'}</Text>
-                    <Text style={styles.courierMeta}>{courier.updatedAt ? new Date(courier.updatedAt).toLocaleTimeString('tr-TR') : 'Canli'}</Text>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Aktif Kuryeler ({couriers.length})</Text>
+              {couriers.length === 0 ? (
+                <Text style={styles.empty}>Su an aktif konum paylasan kurye yok</Text>
+              ) : (
+                couriers.map((courier) => (
+                  <View key={courier.courierId} style={styles.courierCard}>
+                    <View style={styles.courierHeader}>
+                      <Text style={styles.courierName}>{courier.courierName || 'Kurye'}</Text>
+                      <Text style={styles.courierMeta}>{courier.updatedAt ? new Date(courier.updatedAt).toLocaleTimeString('tr-TR') : 'Canli'}</Text>
+                    </View>
+                    <Text style={styles.coord}>Lat: {Number(courier.latitude).toFixed(6)}</Text>
+                    <Text style={styles.coord}>Lng: {Number(courier.longitude).toFixed(6)}</Text>
                   </View>
-                  <Text style={styles.coord}>Lat: {Number(courier.latitude).toFixed(6)}</Text>
-                  <Text style={styles.coord}>Lng: {Number(courier.longitude).toFixed(6)}</Text>
-                </View>
-              ))
-            )}
-          </View>
+                ))
+              )}
+            </View>
+          </ScrollView>
         </>
       )}
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#f1f5f9', padding: 16 },
-  title: { fontSize: 22, fontWeight: '700', color: '#0f172a' },
-  subtitle: { color: '#64748b', marginTop: 4, marginBottom: 16 },
+  root: { flex: 1, backgroundColor: '#f1f5f9' },
+  title: { fontSize: 22, fontWeight: '700', color: '#0f172a', paddingHorizontal: 16, paddingTop: 12 },
+  subtitle: { color: '#64748b', marginTop: 4, marginBottom: 8, paddingHorizontal: 16 },
+  mapContainer: { width: '100%', height: Math.max(280, Math.round(Dimensions.get('window').height * 0.38)) },
+  map: { flex: 1 },
+  mapHint: { position: 'absolute', bottom: 8, left: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.5)', color: '#fff', fontSize: 11, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 4, textAlign: 'center' },
+  scrollContent: { flex: 1, padding: 12 },
   section: { backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 14 },
-  map: {
-    width: '100%',
-    height: Math.max(260, Math.round(Dimensions.get('window').height * 0.34)),
-    borderRadius: 12,
-    marginBottom: 10
-  },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: '#0f172a', marginBottom: 8 },
   meta: { color: '#475569', marginBottom: 10 },
   rowInputs: { flexDirection: 'row', gap: 10 },
