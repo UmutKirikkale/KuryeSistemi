@@ -53,14 +53,34 @@ export const ocrService = {
       type: normalizedType
     } as any);
 
-    const response = await api.post<OCRResponse>('/ocr/extract-order', formData, {
+    const baseURL = (api.defaults.baseURL || '').replace(/\/+$/, '');
+    const authHeader = (api.defaults.headers.common as Record<string, string> | undefined)?.Authorization;
+
+    const response = await fetch(`${baseURL}/ocr/extract-order`, {
+      method: 'POST',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'multipart/form-data'
+        ...(authHeader ? { Authorization: authHeader } : {})
       },
-      timeout: 120000
+      body: formData
     });
 
-    return response.data;
+    const responseText = await response.text();
+    let parsed: OCRResponse | { error?: string } | null = null;
+
+    try {
+      parsed = responseText ? JSON.parse(responseText) : null;
+    } catch {
+      parsed = null;
+    }
+
+    if (!response.ok) {
+      const errorMessage =
+        (parsed as { error?: string } | null)?.error ||
+        `OCR istegi basarisiz oldu (${response.status})`;
+      throw new Error(errorMessage);
+    }
+
+    return parsed as OCRResponse;
   }
 };

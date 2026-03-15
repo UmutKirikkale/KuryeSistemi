@@ -4,6 +4,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Text } from 'react-native';
 import { AdminStackParamList, AdminTabParamList } from './types';
 import AdminStatsScreen from '../screens/admin/AdminStatsScreen';
+import AdminOrdersHistoryScreen from '../screens/admin/AdminOrdersHistoryScreen';
 import AdminUsersScreen from '../screens/admin/AdminUsersScreen';
 import AdminCouriersScreen from '../screens/admin/AdminCouriersScreen';
 import AdminRestaurantsScreen from '../screens/admin/AdminRestaurantsScreen';
@@ -22,6 +23,11 @@ function AdminTabs() {
         name="AdminStats"
         component={AdminStatsScreen}
         options={{ tabBarLabel: 'Dashboard', tabBarIcon: () => <Text>📊</Text> }}
+      />
+      <Tab.Screen
+        name="AdminOrderHistory"
+        component={AdminOrdersHistoryScreen}
+        options={{ tabBarLabel: 'Siparis Gecmis', tabBarIcon: () => <Text>🧾</Text> }}
       />
       <Tab.Screen
         name="AdminUsers"

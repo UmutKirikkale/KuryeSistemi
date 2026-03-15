@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 import { RestaurantTabParamList } from './types';
 import RestaurantOrdersScreen from '../screens/restaurant/RestaurantOrdersScreen';
+import RestaurantOrderHistoryScreen from '../screens/restaurant/RestaurantOrderHistoryScreen';
 import RestaurantCreateOrderScreen from '../screens/restaurant/RestaurantCreateOrderScreen';
 import RestaurantFinancialScreen from '../screens/restaurant/RestaurantFinancialScreen';
 import RestaurantMapScreen from '../screens/restaurant/RestaurantMapScreen';
@@ -17,6 +18,11 @@ export default function RestaurantNavigator() {
         name="RestaurantOrders"
         component={RestaurantOrdersScreen}
         options={{ tabBarLabel: 'Siparisler', tabBarIcon: () => <Text>📋</Text> }}
+      />
+      <Tab.Screen
+        name="RestaurantOrderHistory"
+        component={RestaurantOrderHistoryScreen}
+        options={{ tabBarLabel: 'Tum Gecmis', tabBarIcon: () => <Text>🧾</Text> }}
       />
       <Tab.Screen
         name="RestaurantCreate"

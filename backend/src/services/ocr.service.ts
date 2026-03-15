@@ -77,6 +77,29 @@ export class OCRService {
     return digits;
   }
 
+  private sanitizeCustomerName(value: string): string {
+    return value
+      .replace(/(?:\+?90\s*)?(?:\(?0?5\d{2}\)?[\s-]*\d{3}[\s-]*\d{2}[\s-]*\d{2})/g, ' ')
+      .replace(/\b(?:[01]?\d|2[0-3])[:.]?[0-5]\d\b/g, ' ')
+      .replace(/\b(?:saat|teslim\s*saati)\b/gi, ' ')
+      .replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ\s]/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
+
+  private isLikelyCustomerName(value: string): boolean {
+    if (!value) return false;
+    if (value.length < 4 || value.length > 55) return false;
+    if (this.isAddressLike(value)) return false;
+    if (this.hasPhone(value) || this.hasTime(value)) return false;
+
+    const sanitized = this.sanitizeCustomerName(value);
+    if (!sanitized) return false;
+
+    const words = sanitized.split(/\s+/).filter((word) => word.length > 1);
+    return words.length >= 2;
+  }
+
   private parseAmount(amountText: string): number {
     const cleaned = amountText.replace(/[^\d.,]/g, '');
     const commaCount = (cleaned.match(/,/g) || []).length;
@@ -160,21 +183,13 @@ export class OCRService {
               .trim();
           }
         }
-        if (inline && !/\d/.test(inline) && inline.length >= 4 && !this.isAddressLike(inline) && !this.hasPhone(inline) && !this.hasTime(inline)) {
-          return inline.replace(/\s+/g, ' ').trim();
+        if (this.isLikelyCustomerName(inline)) {
+          return this.sanitizeCustomerName(inline);
         }
 
         const nextLine = lines[i + 1]?.trim();
-        if (
-          nextLine &&
-          !/\d/.test(nextLine) &&
-          nextLine.length >= 4 &&
-          nextLine.length <= 45 &&
-          !this.isAddressLike(nextLine) &&
-          !this.hasPhone(nextLine) &&
-          !this.hasTime(nextLine)
-        ) {
-          return nextLine.replace(/\s+/g, ' ').trim();
+        if (nextLine && this.isLikelyCustomerName(nextLine)) {
+          return this.sanitizeCustomerName(nextLine);
         }
       }
 
@@ -182,41 +197,25 @@ export class OCRService {
       if (!match) continue;
 
       const currentLineValue = (match[1] || '').trim();
-      if (
-        currentLineValue &&
-        !/\d/.test(currentLineValue) &&
-        currentLineValue.length >= 4 &&
-        !this.isAddressLike(currentLineValue) &&
-        !this.hasPhone(currentLineValue) &&
-        !this.hasTime(currentLineValue)
-      ) {
-        return currentLineValue.replace(/\s+/g, ' ').trim();
+      if (this.isLikelyCustomerName(currentLineValue)) {
+        return this.sanitizeCustomerName(currentLineValue);
       }
 
       const next = lines[i + 1]?.trim();
-      if (
-        next &&
-        !/\d/.test(next) &&
-        next.length >= 4 &&
-        next.length <= 45 &&
-        !this.isAddressLike(next) &&
-        !this.hasPhone(next) &&
-        !this.hasTime(next)
-      ) {
-        return next.replace(/\s+/g, ' ').trim();
+      if (next && this.isLikelyCustomerName(next)) {
+        return this.sanitizeCustomerName(next);
       }
     }
 
     const fullNameLine = lines.find((line) => {
-      if (line.length < 4 || line.length > 45) return false;
-      if (/\d/.test(line)) return false;
+      if (line.length < 4 || line.length > 55) return false;
       if (this.isAddressLike(line) || this.hasPhone(line) || this.hasTime(line)) return false;
       const lower = line.toLowerCase();
       if (this.stopWords.some((word) => lower.includes(word))) return false;
-      return /^[a-zA-ZğüşıöçĞÜŞİÖÇ]+\s+[a-zA-ZğüşıöçĞÜŞİÖÇ]+/.test(line);
+      return this.isLikelyCustomerName(line);
     });
 
-    return fullNameLine;
+    return fullNameLine ? this.sanitizeCustomerName(fullNameLine) : undefined;
   }
 
   private extractAddress(text: string, lines: string[]): string | undefined {
@@ -229,7 +228,10 @@ export class OCRService {
 
       const chunks: string[] = [];
       if (match[2]?.trim()) {
-        chunks.push(match[2].trim());
+        const sameLine = this.sanitizeDeliveryAddress(match[2].trim());
+        if (sameLine) {
+          chunks.push(sameLine);
+        }
       }
 
       for (let j = i + 1; j < lines.length && j <= i + 3; j++) {
@@ -240,9 +242,11 @@ export class OCRService {
         const hasPhoneOrTime = this.hasPhone(next) || this.hasTime(next);
         if (this.stopWords.some((word) => lower.includes(word))) break;
         if (/\d+[.,]?\d*\s*(₺|tl)/i.test(next)) break;
-        if (hasPhoneOrTime) break;
         if (itemLikeLine) break;
-        chunks.push(next);
+        const cleanedNext = this.sanitizeDeliveryAddress(next);
+        if (cleanedNext && (!hasPhoneOrTime || this.isAddressLike(cleanedNext))) {
+          chunks.push(cleanedNext);
+        }
       }
 
       if (chunks.length > 0) {
@@ -257,12 +261,24 @@ export class OCRService {
       /(mahalle|mah\.|sokak|sk\.|cadde|cd\.|apartman|apt\.|site|blok|daire|no\s*:?)\b/i.test(line)
     );
     if (addressLikeLine) {
-      return addressLikeLine.trim();
+      const cleaned = this.sanitizeDeliveryAddress(addressLikeLine.trim());
+      if (cleaned.length >= 6) {
+        return cleaned;
+      }
     }
 
     const inlineAddress = text.match(/[^\n]{0,24}(?:mahalle|mah\.|sokak|sk\.|cadde|cd\.|apartman|apt\.|site|blok|daire|no\s*:?)\s*[^\n]{8,}/i);
     const cleanedInline = inlineAddress?.[0] ? this.sanitizeDeliveryAddress(inlineAddress[0].trim()) : undefined;
-    return cleanedInline;
+    if (cleanedInline && cleanedInline.length >= 6) {
+      return cleanedInline;
+    }
+
+    const fallbackDelivery = lines
+      .map((line) => this.sanitizeDeliveryAddress(line))
+      .filter((line) => line.length >= 10)
+      .find((line) => this.isAddressLike(line));
+
+    return fallbackDelivery;
   }
 
   private calculateQuality(confidence: number, missingCount: number): 'LOW' | 'MEDIUM' | 'HIGH' {
@@ -280,12 +296,10 @@ export class OCRService {
   private async preprocessImage(imagePath: string): Promise<Buffer> {
     return await sharp(imagePath)
       .rotate()
-      .resize({ width: 1400, withoutEnlargement: true })
+      .resize({ width: 1100, withoutEnlargement: true })
       .grayscale()
       .normalize()
-      .sharpen()
-      .linear(1.1, -10)
-      .threshold(160)
+      .sharpen({ sigma: 1.1 })
       .toBuffer();
   }
 
@@ -301,8 +315,8 @@ export class OCRService {
         console.warn('OCR pre-processing failed, falling back to original image', error);
       }
 
-      const { data } = await Tesseract.recognize(imageInput, 'tur+eng', {
-        logger: (m) => console.log(m)
+      const { data } = await Tesseract.recognize(imageInput, 'tur', {
+        logger: () => undefined
       });
 
       return {

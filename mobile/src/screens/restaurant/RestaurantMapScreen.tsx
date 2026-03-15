@@ -116,6 +116,11 @@ export default function RestaurantMapScreen() {
               showsUserLocation={false}
               showsCompass
               showsTraffic={false}
+              onPress={(event) => {
+                const { latitude: nextLat, longitude: nextLng } = event.nativeEvent.coordinate;
+                setLatitude(String(nextLat.toFixed(6)));
+                setLongitude(String(nextLng.toFixed(6)));
+              }}
             >
               {profile?.latitude != null && profile?.longitude != null && (
                 <Marker
@@ -123,6 +128,12 @@ export default function RestaurantMapScreen() {
                   title={profile?.name || 'Restoran'}
                   description={profile?.address || 'Restoran konumu'}
                   pinColor="#dc2626"
+                  draggable
+                  onDragEnd={(event) => {
+                    const { latitude: nextLat, longitude: nextLng } = event.nativeEvent.coordinate;
+                    setLatitude(String(nextLat.toFixed(6)));
+                    setLongitude(String(nextLng.toFixed(6)));
+                  }}
                 />
               )}
 
@@ -137,6 +148,7 @@ export default function RestaurantMapScreen() {
               ))}
             </MapView>
             <Text style={styles.meta}>Kirmizi: Restoran, Mavi: Kurye</Text>
+            <Text style={styles.meta}>Konumu degistirmek icin haritaya dokun veya kirmizi pini surukle.</Text>
           </View>
 
           <View style={styles.section}>

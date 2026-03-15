@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Modal,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View
 } from 'react-native';
+import MapView, { Marker } from 'react-native-maps';
 import { useAuthStore } from '../../store/authStore';
 import { orderService, Order } from '../../services/orderService';
 import { locationService } from '../../services/locationService';
@@ -44,6 +46,7 @@ export default function CourierOrdersScreen() {
   const [filter, setFilter] = useState<'ALL' | 'POOL' | 'MINE' | 'COMPLETED'>('ALL');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [query, setQuery] = useState('');
+  const [selectedRestaurantOrder, setSelectedRestaurantOrder] = useState<Order | null>(null);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -135,6 +138,7 @@ export default function CourierOrdersScreen() {
     const canAssign = ['PENDING', 'APPROVED', 'PREPARING'].includes(item.status);
     const canPickup = isMine && item.status === 'ASSIGNED';
     const canDeliver = isMine && item.status === 'PICKED_UP';
+    const canViewRestaurantOnMap = isMine && ['ASSIGNED', 'PICKED_UP'].includes(item.status);
     const isActioning = actionLoading === item.id;
 
     return (
@@ -158,6 +162,21 @@ export default function CourierOrdersScreen() {
         <Text style={styles.label}>Tutar: <Text style={styles.value}>{item.orderAmount.toFixed(2)} ₺</Text></Text>
 
         <View style={styles.actions}>
+          {canViewRestaurantOnMap && (
+            <Pressable
+              style={[styles.btn, styles.btnMap]}
+              onPress={() => {
+                if (item.restaurant?.latitude != null && item.restaurant?.longitude != null) {
+                  setSelectedRestaurantOrder(item);
+                } else {
+                  Alert.alert('Konum Yok', 'Bu siparis icin restoran konumu tanimli degil.');
+                }
+              }}
+            >
+              <Text style={styles.btnText}>Restorani Haritada Gor</Text>
+            </Pressable>
+          )}
+
           {canAssign && (
             <Pressable
               style={[styles.btn, styles.btnPrimary]}
@@ -278,6 +297,51 @@ export default function CourierOrdersScreen() {
           ListEmptyComponent={<Text style={styles.empty}>Siparis bulunamadi</Text>}
         />
       )}
+
+      <Modal
+        visible={!!selectedRestaurantOrder}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setSelectedRestaurantOrder(null)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Restoran Konumu</Text>
+                <Text style={styles.modalSub}>{selectedRestaurantOrder?.restaurant?.name || '-'}</Text>
+              </View>
+              <Pressable onPress={() => setSelectedRestaurantOrder(null)} style={styles.modalCloseBtn}>
+                <Text style={styles.modalCloseText}>Kapat</Text>
+              </Pressable>
+            </View>
+
+            {selectedRestaurantOrder?.restaurant?.latitude != null && selectedRestaurantOrder?.restaurant?.longitude != null ? (
+              <MapView
+                style={styles.restaurantMap}
+                initialRegion={{
+                  latitude: Number(selectedRestaurantOrder.restaurant.latitude),
+                  longitude: Number(selectedRestaurantOrder.restaurant.longitude),
+                  latitudeDelta: 0.01,
+                  longitudeDelta: 0.01
+                }}
+              >
+                <Marker
+                  coordinate={{
+                    latitude: Number(selectedRestaurantOrder.restaurant.latitude),
+                    longitude: Number(selectedRestaurantOrder.restaurant.longitude)
+                  }}
+                  title={selectedRestaurantOrder.restaurant.name || 'Restoran'}
+                  description={selectedRestaurantOrder.restaurant.address || 'Restoran adresi'}
+                  pinColor="#dc2626"
+                />
+              </MapView>
+            ) : (
+              <Text style={styles.empty}>Restoran konumu bulunamadi</Text>
+            )}
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -322,9 +386,18 @@ const styles = StyleSheet.create({
   value: { color: '#0f172a', fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 10 },
   btn: { flex: 1, paddingVertical: 8, borderRadius: 8, alignItems: 'center' },
+  btnMap: { backgroundColor: '#475569' },
   btnPrimary: { backgroundColor: '#0f766e' },
   btnWarning: { backgroundColor: '#d97706' },
   btnSuccess: { backgroundColor: '#16a34a' },
   btnText: { color: '#fff', fontWeight: '600', fontSize: 13 },
-  empty: { textAlign: 'center', color: '#94a3b8', marginTop: 60, fontSize: 14 }
+  empty: { textAlign: 'center', color: '#94a3b8', marginTop: 60, fontSize: 14 },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(15,23,42,0.45)', justifyContent: 'flex-end' },
+  modalCard: { backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 12, minHeight: '55%' },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  modalTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  modalSub: { fontSize: 12, color: '#64748b', marginTop: 2 },
+  modalCloseBtn: { backgroundColor: '#e2e8f0', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  modalCloseText: { color: '#334155', fontWeight: '700', fontSize: 12 },
+  restaurantMap: { width: '100%', height: 360, borderRadius: 12 }
 });

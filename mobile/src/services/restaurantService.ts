@@ -43,14 +43,31 @@ export const restaurantService = {
 
   getCourierLocations: async () => {
     const response = await api.get('/restaurant/courier-locations');
-    return response.data as {
-      couriers: Array<{
+    const payload = response.data as {
+      couriers?: Array<{
         courierId: string;
         courierName?: string;
         latitude: number;
         longitude: number;
         updatedAt?: string;
+        lastUpdate?: string;
       }>;
+      courierLocations?: Array<{
+        courierId: string;
+        courierName?: string;
+        latitude: number;
+        longitude: number;
+        updatedAt?: string;
+        lastUpdate?: string;
+      }>;
+    };
+
+    const list = payload.couriers || payload.courierLocations || [];
+    return {
+      couriers: list.map((item) => ({
+        ...item,
+        updatedAt: item.updatedAt || item.lastUpdate
+      }))
     };
   },
 

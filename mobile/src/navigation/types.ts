@@ -13,6 +13,7 @@ export type CourierTabParamList = {
 
 export type RestaurantTabParamList = {
   RestaurantOrders: undefined;
+  RestaurantOrderHistory: undefined;
   RestaurantCreate: undefined;
   RestaurantFinancial: undefined;
   RestaurantMap: undefined;
@@ -21,6 +22,7 @@ export type RestaurantTabParamList = {
 
 export type AdminTabParamList = {
   AdminStats: undefined;
+  AdminOrderHistory: undefined;
   AdminUsers: undefined;
   AdminCouriers: undefined;
   AdminRestaurants: undefined;

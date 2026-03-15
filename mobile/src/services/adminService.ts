@@ -74,6 +74,11 @@ export const adminService = {
         status: string;
         orderAmount: number;
         createdAt: string;
+        pickupAddress?: string;
+        deliveryAddress?: string;
+        customerName?: string;
+        customerPhone?: string;
+        paymentMethod?: 'CASH' | 'CARD';
         sourcePlatform?: string;
         externalOrderId?: string;
         restaurant?: { name?: string };

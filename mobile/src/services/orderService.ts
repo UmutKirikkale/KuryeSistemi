@@ -27,7 +27,14 @@ export interface Order {
   externalOrderId?: string;
   notes?: string;
   createdAt: string;
-  restaurant?: { id: string; name: string; address: string; phone: string };
+  restaurant?: {
+    id: string;
+    name: string;
+    address: string;
+    phone: string;
+    latitude?: number;
+    longitude?: number;
+  };
   courier?: { id: string; name: string; phone: string };
 }
 

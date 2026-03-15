@@ -76,7 +76,7 @@ export default function RestaurantCreateOrderScreen() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
-        quality: 1
+        quality: 0.6
       });
 
       if (result.canceled || !result.assets?.length) {

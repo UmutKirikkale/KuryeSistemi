@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useLocationStore } from '../store/locationStore';
 import { adminService } from '../services/adminService';
@@ -248,6 +248,9 @@ export default function AdminDashboard() {
   const [allOrdersPage, setAllOrdersPage] = useState(1);
   const [allOrdersTotalPages, setAllOrdersTotalPages] = useState(1);
   const [allOrdersTotal, setAllOrdersTotal] = useState(0);
+  const [allOrdersQuery, setAllOrdersQuery] = useState('');
+  const [allOrdersStatus, setAllOrdersStatus] = useState('ALL');
+  const [allOrdersPlatform, setAllOrdersPlatform] = useState('ALL');
   const [couriers, setCouriers] = useState<Courier[]>([]);
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [todayTotalRevenue, setTodayTotalRevenue] = useState<number>(0);
@@ -270,7 +273,6 @@ export default function AdminDashboard() {
   const [autoBusyAfterOrders, setAutoBusyAfterOrders] = useState<number>(4);
   const [platformCommissionTemplates, setPlatformCommissionTemplates] = useState<SystemSettings['platformCommissionTemplates']>(defaultPlatformCommissionTemplates);
   const [settingsSaving, setSettingsSaving] = useState(false);
-  const [resettingData, setResettingData] = useState(false);
 
   const [courierForm, setCourierForm] = useState({
     email: '',
@@ -379,33 +381,6 @@ export default function AdminDashboard() {
     }
   };
 
-
-
-    const handleResetAllData = async () => {
-      const approved = window.confirm(
-        'D\u0130KKAT: T\u00fcm sipari\u015fler, restoranlar, kuryeler, m\u00fc\u015fteriler ve finansal veriler kal\u0131c\u0131 olarak silinecek. Admin hesaplar\u0131 korunur.\n\nDevam etmek istiyor musunuz?'
-      );
-      if (!approved) return;
-
-      try {
-        setResettingData(true);
-        const response = await adminService.resetAllData();
-        alert(response?.message || 'T\u00fcm veriler s\u0131f\u0131rland\u0131');
-        await fetchDashboardData();
-        await fetchSystemSettings();
-        setRecentUsers([]);
-        setRecentOrders([]);
-        setCouriers([]);
-        setRestaurants([]);
-        setFinancialReport(null);
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Veri s\u0131f\u0131rlama ba\u015far\u0131s\u0131z oldu';
-        alert(message);
-      } finally {
-        setResettingData(false);
-      }
-    };
-
   const fetchDashboardData = async () => {
     try {
       const { stats } = await adminService.getDashboardStats();
@@ -456,6 +431,25 @@ export default function AdminDashboard() {
     setShowAllOrdersModal(true);
     await fetchAllOrdersHistory(1);
   };
+
+  const filteredAllOrders = useMemo(() => {
+    const normalizedQuery = allOrdersQuery.trim().toLowerCase();
+
+    return allOrders.filter((order) => {
+      const statusOk = allOrdersStatus === 'ALL' || order.status === allOrdersStatus;
+      const platformOk = allOrdersPlatform === 'ALL' || (order.sourcePlatform || '') === allOrdersPlatform;
+      if (!statusOk || !platformOk) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = `${order.orderNumber} ${order.restaurant?.name || ''} ${order.customerName || ''} ${order.customerPhone || ''} ${order.pickupAddress || ''} ${order.deliveryAddress || ''} ${order.sourcePlatform || ''} ${order.externalOrderId || ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [allOrders, allOrdersPlatform, allOrdersQuery, allOrdersStatus]);
 
   useEffect(() => {
     fetchRecentOrders(recentOrdersPeriod);
@@ -759,13 +753,6 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                onClick={handleResetAllData}
-                disabled={resettingData}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {resettingData ? 'S\u0131f\u0131rlan\u0131yor...' : 'T\u00fcm Verileri S\u0131f\u0131rla'}
-              </button>
               <button
                 onClick={logout}
                 className="btn btn-secondary"
@@ -1089,9 +1076,42 @@ export default function AdminDashboard() {
             </div>
 
             <div className="overflow-auto flex-1 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <input
+                  type="text"
+                  value={allOrdersQuery}
+                  onChange={(event) => setAllOrdersQuery(event.target.value)}
+                  placeholder="Sipariş no, restoran, müşteri, adres ara"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <select
+                  value={allOrdersStatus}
+                  onChange={(event) => setAllOrdersStatus(event.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="ALL">Tüm Durumlar</option>
+                  <option value="PENDING">Bekliyor</option>
+                  <option value="APPROVED">Onaylandı</option>
+                  <option value="PREPARING">Hazırlanıyor</option>
+                  <option value="ASSIGNED">Atandı</option>
+                  <option value="PICKED_UP">Yolda</option>
+                  <option value="DELIVERED">Teslim Edildi</option>
+                  <option value="CANCELLED">İptal</option>
+                </select>
+                <select
+                  value={allOrdersPlatform}
+                  onChange={(event) => setAllOrdersPlatform(event.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="ALL">Tüm Platformlar</option>
+                  <option value="FEEDME">Feedme</option>
+                  <option value="YEMEKSEPETI">Yemeksepeti</option>
+                </select>
+              </div>
+
               {allOrdersLoading ? (
                 <p className="text-sm text-gray-500">Sipariş geçmişi yükleniyor...</p>
-              ) : allOrders.length === 0 ? (
+              ) : filteredAllOrders.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-10">Kayıt bulunamadı</p>
               ) : (
                 <table className="min-w-full text-sm">
@@ -1110,7 +1130,7 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {allOrders.map((order) => (
+                    {filteredAllOrders.map((order) => (
                       <tr key={order.id} className="border-b last:border-0 align-top">
                         <td className="py-2 px-2 whitespace-nowrap">{new Date(order.createdAt).toLocaleString('tr-TR')}</td>
                         <td className="py-2 px-2 font-medium">{order.orderNumber}</td>

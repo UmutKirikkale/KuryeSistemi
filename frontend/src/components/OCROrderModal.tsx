@@ -34,6 +34,8 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
     orderAmount: '',
     customerName: '',
     customerPhone: '',
+    sourcePlatform: '',
+    externalOrderId: '',
     notes: ''
   });
 
@@ -140,12 +142,19 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
         return;
       }
 
+      if (formData.sourcePlatform && !formData.externalOrderId.trim()) {
+        alert('❌ Sipariş oluşturulamadı: Platform seçiliyse platform sipariş no zorunludur.');
+        return;
+      }
+
       await createOrder({
         ...formData,
         pickupAddress: formData.pickupAddress.trim(),
         deliveryAddress: formData.deliveryAddress.trim(),
         customerName: formData.customerName.trim(),
         customerPhone: formData.customerPhone.trim(),
+        sourcePlatform: formData.sourcePlatform || undefined,
+        externalOrderId: formData.externalOrderId.trim() || undefined,
         notes: formData.notes.trim() || undefined,
         orderAmount: payableAmount
       });
@@ -434,6 +443,43 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                     placeholder="Özel istekler..."
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="ocrSourcePlatform" className="block text-sm font-medium text-gray-700 mb-2">
+                    Sipariş Platformu
+                  </label>
+                  <select
+                    id="ocrSourcePlatform"
+                    value={formData.sourcePlatform}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        sourcePlatform: e.target.value,
+                        externalOrderId: e.target.value ? formData.externalOrderId : ''
+                      })
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  >
+                    <option value="">Platform Yok</option>
+                    <option value="FEEDME">Feedme</option>
+                    <option value="YEMEKSEPETI">Yemeksepeti</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label htmlFor="ocrExternalOrderId" className="block text-sm font-medium text-gray-700 mb-2">
+                    Platform Sipariş No
+                  </label>
+                  <input
+                    id="ocrExternalOrderId"
+                    type="text"
+                    value={formData.externalOrderId}
+                    disabled={!formData.sourcePlatform}
+                    onChange={(e) => setFormData({ ...formData, externalOrderId: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400"
+                    placeholder={formData.sourcePlatform ? 'Örn: YS-123456' : 'Önce platform seçin'}
                   />
                 </div>
               </div>

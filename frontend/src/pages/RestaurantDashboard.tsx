@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useOrderStore } from '../store/orderStore';
 import { useLocationStore } from '../store/locationStore';
@@ -79,6 +79,9 @@ export default function RestaurantDashboard() {
   const [orderHistoryPage, setOrderHistoryPage] = useState(1);
   const [orderHistoryTotalPages, setOrderHistoryTotalPages] = useState(1);
   const [orderHistoryTotal, setOrderHistoryTotal] = useState(0);
+  const [orderHistoryQuery, setOrderHistoryQuery] = useState('');
+  const [orderHistoryStatus, setOrderHistoryStatus] = useState('ALL');
+  const [orderHistoryPlatform, setOrderHistoryPlatform] = useState('ALL');
   const [categoryName, setCategoryName] = useState('');
   const [itemForm, setItemForm] = useState({
     name: '',
@@ -319,6 +322,25 @@ export default function RestaurantDashboard() {
     setShowAllOrdersModal(true);
     await fetchOrderHistory(1);
   };
+
+  const filteredOrderHistory = useMemo(() => {
+    const normalizedQuery = orderHistoryQuery.trim().toLowerCase();
+
+    return orderHistory.filter((order) => {
+      const statusOk = orderHistoryStatus === 'ALL' || order.status === orderHistoryStatus;
+      const platformOk = orderHistoryPlatform === 'ALL' || (order.sourcePlatform || '') === orderHistoryPlatform;
+      if (!statusOk || !platformOk) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = `${order.orderNumber} ${order.customerName} ${order.customerPhone} ${order.pickupAddress} ${order.deliveryAddress} ${order.sourcePlatform || ''} ${order.externalOrderId || ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [orderHistory, orderHistoryPlatform, orderHistoryQuery, orderHistoryStatus]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -785,9 +807,42 @@ export default function RestaurantDashboard() {
             </div>
 
             <div className="overflow-auto flex-1 p-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                <input
+                  type="text"
+                  value={orderHistoryQuery}
+                  onChange={(event) => setOrderHistoryQuery(event.target.value)}
+                  placeholder="Sipariş no, müşteri, adres ara"
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                <select
+                  value={orderHistoryStatus}
+                  onChange={(event) => setOrderHistoryStatus(event.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="ALL">Tüm Durumlar</option>
+                  <option value="PENDING">Bekliyor</option>
+                  <option value="APPROVED">Onaylandı</option>
+                  <option value="PREPARING">Hazırlanıyor</option>
+                  <option value="ASSIGNED">Atandı</option>
+                  <option value="PICKED_UP">Yolda</option>
+                  <option value="DELIVERED">Teslim Edildi</option>
+                  <option value="CANCELLED">İptal</option>
+                </select>
+                <select
+                  value={orderHistoryPlatform}
+                  onChange={(event) => setOrderHistoryPlatform(event.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  <option value="ALL">Tüm Platformlar</option>
+                  <option value="FEEDME">Feedme</option>
+                  <option value="YEMEKSEPETI">Yemeksepeti</option>
+                </select>
+              </div>
+
               {orderHistoryLoading ? (
                 <p className="text-sm text-gray-500">Sipariş geçmişi yükleniyor...</p>
-              ) : orderHistory.length === 0 ? (
+              ) : filteredOrderHistory.length === 0 ? (
                 <p className="text-sm text-gray-500 text-center py-10">Kayıt bulunamadı</p>
               ) : (
                 <table className="min-w-full text-sm">
@@ -805,7 +860,7 @@ export default function RestaurantDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {orderHistory.map((order) => (
+                    {filteredOrderHistory.map((order) => (
                       <tr key={order.id} className="border-b last:border-0 align-top">
                         <td className="py-2 px-2 whitespace-nowrap">{new Date(order.createdAt).toLocaleString('tr-TR')}</td>
                         <td className="py-2 px-2 font-medium">{order.orderNumber}</td>

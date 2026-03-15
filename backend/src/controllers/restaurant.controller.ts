@@ -178,15 +178,16 @@ export const getRestaurantCourierLocations = async (req: AuthRequest, res: Respo
         latitude: order.courier?.courierProfile?.currentLatitude,
         longitude: order.courier?.courierProfile?.currentLongitude,
         vehicleType: order.courier?.courierProfile?.vehicleType,
-        lastUpdate: order.courier?.courierProfile?.lastLocationUpdate,
+        updatedAt: order.courier?.courierProfile?.lastLocationUpdate,
         orderId: order.id,
         orderNumber: order.orderNumber,
         orderStatus: order.status
       }))
-      .filter(loc => loc.latitude && loc.longitude);
+      .filter(loc => loc.latitude != null && loc.longitude != null);
 
     res.json({
-      courierLocations
+      courierLocations,
+      couriers: courierLocations
     });
   } catch (error) {
     throw error;
