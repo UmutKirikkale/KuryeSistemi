@@ -31,11 +31,7 @@ const getCourierDailySettlementSummary = async (courierId: string, dateInput?: s
       deliveredAt: {
         gte: startOfDay,
         lte: endOfDay
-      },
-      OR: [
-        { paymentMethod: 'CASH' },
-        { paymentMethod: null }
-      ]
+      }
     },
     include: {
       restaurant: {
