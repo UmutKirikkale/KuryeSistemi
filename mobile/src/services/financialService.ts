@@ -95,5 +95,15 @@ export const financialService = {
       message: string;
       report: any;
     };
+  },
+
+  getDailyReport: async (date?: string) => {
+    const response = await api.get('/financial/daily', { params: { date } });
+    return response.data as { report: any };
+  },
+
+  getMonthlyReport: async (year?: number, month?: number) => {
+    const response = await api.get('/financial/monthly', { params: { year, month } });
+    return response.data as { report: any };
   }
 };

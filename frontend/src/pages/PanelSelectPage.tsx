@@ -14,13 +14,6 @@ export default function PanelSelectPage() {
           >
             Admin / Kurye / Restoran
           </Link>
-
-          <Link
-            to="/customer/login"
-            className="w-full inline-flex justify-center items-center px-4 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50"
-          >
-            Müşteri
-          </Link>
         </div>
       </div>
     </div>

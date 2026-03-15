@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../../store/authStore';
 import { orderService, Order } from '../../services/orderService';
+import { wsService } from '../../services/websocket';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Bekliyor',
@@ -67,7 +68,22 @@ export default function RestaurantOrdersScreen() {
   useEffect(() => {
     loadOrders();
     const interval = setInterval(loadOrders, 15000);
-    return () => clearInterval(interval);
+
+    const onOrderStatusUpdate = () => {
+      void loadOrders();
+    };
+    const onNewOrder = () => {
+      void loadOrders();
+    };
+
+    wsService.onOrderStatusUpdate(onOrderStatusUpdate);
+    wsService.onNewOrder(onNewOrder);
+
+    return () => {
+      clearInterval(interval);
+      wsService.removeListener('order:status:update', onOrderStatusUpdate);
+      wsService.removeListener('order:new', onNewOrder);
+    };
   }, [loadOrders]);
 
   const visibleOrders = useMemo(() => {

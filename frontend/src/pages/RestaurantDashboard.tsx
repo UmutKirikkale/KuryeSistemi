@@ -223,6 +223,21 @@ export default function RestaurantDashboard() {
     }
   };
 
+  const handleEditCategory = async (categoryId: string, currentName: string) => {
+    const nextName = window.prompt('Yeni kategori adı', currentName);
+    if (nextName === null || !nextName.trim()) {
+      return;
+    }
+
+    try {
+      await restaurantService.updateCategory(categoryId, { name: nextName.trim() });
+      await loadMenuData();
+    } catch (error) {
+      console.error('Failed to edit category:', error);
+      alert('Kategori güncellenemedi');
+    }
+  };
+
   const handleCreateItem = async () => {
     if (!itemForm.name.trim() || itemForm.price <= 0) {
       alert('Ürün adı ve fiyat zorunludur');
@@ -358,10 +373,15 @@ export default function RestaurantDashboard() {
               </h1>
               <p className="text-sm text-gray-600">Hoş geldiniz, {user?.name}</p>
             </div>
-            <button onClick={handleLogout} className="btn btn-secondary flex items-center gap-2">
-              <LogOut className="w-4 h-4" />
-              Çıkış
-            </button>
+            <div className="flex items-center gap-2">
+              <a href="/restaurant/financial-reports" className="btn btn-secondary">
+                Gunluk/Aylik Rapor
+              </a>
+              <button onClick={handleLogout} className="btn btn-secondary flex items-center gap-2">
+                <LogOut className="w-4 h-4" />
+                Çıkış
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -620,12 +640,20 @@ export default function RestaurantDashboard() {
                       <div key={category.id} className="border rounded-lg p-4">
                         <div className="flex items-center justify-between mb-3">
                           <h3 className="font-semibold text-gray-900">{category.name}</h3>
-                          <button
-                            onClick={() => handleDeleteCategory(category.id, category.name)}
-                            className="text-sm px-3 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
-                          >
-                            Kategoriyi Sil
-                          </button>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleEditCategory(category.id, category.name)}
+                              className="text-sm px-3 py-1 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                            >
+                              Duzenle
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category.id, category.name)}
+                              className="text-sm px-3 py-1 border border-red-200 text-red-600 rounded-lg hover:bg-red-50"
+                            >
+                              Kategoriyi Sil
+                            </button>
+                          </div>
                         </div>
 
                         {category.menuItems.length === 0 ? (

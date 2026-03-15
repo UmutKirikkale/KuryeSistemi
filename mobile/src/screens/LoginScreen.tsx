@@ -11,7 +11,11 @@ import {
 } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
-export default function LoginScreen() {
+type Props = {
+  onRegisterPress?: () => void;
+};
+
+export default function LoginScreen({ onRegisterPress }: Props) {
   const { login, isLoading, error } = useAuthStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -69,6 +73,12 @@ export default function LoginScreen() {
         <Pressable style={styles.button} onPress={handleLogin} disabled={isLoading}>
           {isLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Giris Yap</Text>}
         </Pressable>
+
+        {!!onRegisterPress && (
+          <Pressable style={styles.linkButton} onPress={onRegisterPress}>
+            <Text style={styles.linkText}>Restoran hesabi olustur</Text>
+          </Pressable>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
@@ -140,6 +150,14 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+    fontWeight: '600'
+  },
+  linkButton: {
+    marginTop: 12,
+    alignItems: 'center'
+  },
+  linkText: {
+    color: '#1d4ed8',
     fontWeight: '600'
   }
 });

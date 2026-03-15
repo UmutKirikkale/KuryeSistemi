@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import { locationService } from '../../services/locationService';
+import { wsService } from '../../services/websocket';
 
 export default function CourierTrackingScreen() {
   const [isTracking, setIsTracking] = useState(false);
@@ -80,6 +81,7 @@ export default function CourierTrackingScreen() {
           setCurrentLocation({ lat: latitude, lng: longitude });
           try {
             await locationService.updateLocation(latitude, longitude, accuracy ?? undefined);
+            wsService.updateCourierLocation(latitude, longitude, accuracy ?? undefined);
           } catch {
             // sessiz geç, bir sonraki güncelleme denenecek
           }

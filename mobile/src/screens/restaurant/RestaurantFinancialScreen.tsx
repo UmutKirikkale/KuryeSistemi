@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { financialService } from '../../services/financialService';
+import FinancialReportSection from '../../components/FinancialReportSection';
 
 export default function RestaurantFinancialScreen() {
   const [data, setData] = useState<any>(null);
@@ -114,6 +115,7 @@ export default function RestaurantFinancialScreen() {
               </View>
             </View>
           ))}
+          <FinancialReportSection role="RESTAURANT" />
         </>
       )}
     </ScrollView>

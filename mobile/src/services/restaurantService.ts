@@ -89,6 +89,11 @@ export const restaurantService = {
     return response.data;
   },
 
+  updateCategory: async (categoryId: string, data: { name: string }) => {
+    const response = await api.patch(`/restaurant/menu/categories/${categoryId}`, data);
+    return response.data;
+  },
+
   createMenuItem: async (data: {
     name: string;
     description?: string;

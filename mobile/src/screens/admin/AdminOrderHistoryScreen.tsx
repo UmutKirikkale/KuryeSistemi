@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -6,11 +6,9 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
-  TextInput,
   View
 } from 'react-native';
 import { adminService } from '../../services/adminService';
-import { wsService } from '../../services/websocket';
 
 type AdminOrder = {
   id: string;
@@ -30,16 +28,13 @@ type AdminOrder = {
   };
 };
 
-export default function AdminOrdersHistoryScreen() {
+export default function AdminOrderHistoryScreen() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
-  const [query, setQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'DELIVERED' | 'CANCELLED'>('ALL');
-  const [platformFilter, setPlatformFilter] = useState<'ALL' | 'FEEDME' | 'YEMEKSEPETI'>('ALL');
 
   const loadOrders = useCallback(async (nextPage = 1) => {
     try {
@@ -57,42 +52,6 @@ export default function AdminOrdersHistoryScreen() {
   useEffect(() => {
     loadOrders(1);
   }, [loadOrders]);
-
-  useEffect(() => {
-    const onOrderStatusUpdate = () => {
-      void loadOrders(page);
-    };
-    const onNewOrder = () => {
-      void loadOrders(1);
-    };
-
-    wsService.onOrderStatusUpdate(onOrderStatusUpdate);
-    wsService.onNewOrder(onNewOrder);
-
-    return () => {
-      wsService.removeListener('order:status:update', onOrderStatusUpdate);
-      wsService.removeListener('order:new', onNewOrder);
-    };
-  }, [loadOrders, page]);
-
-  const filteredOrders = useMemo(() => {
-    const normalizedQuery = query.trim().toLowerCase();
-
-    return orders.filter((order) => {
-      const statusOk = statusFilter === 'ALL' || order.status === statusFilter;
-      const platformOk = platformFilter === 'ALL' || (order.sourcePlatform || '') === platformFilter;
-      if (!statusOk || !platformOk) {
-        return false;
-      }
-
-      if (!normalizedQuery) {
-        return true;
-      }
-
-      const haystack = `${order.orderNumber} ${order.restaurant?.name || ''} ${order.customerName || ''} ${order.customerPhone || ''} ${order.pickupAddress || ''} ${order.deliveryAddress || ''} ${order.sourcePlatform || ''} ${order.externalOrderId || ''}`.toLowerCase();
-      return haystack.includes(normalizedQuery);
-    });
-  }, [orders, platformFilter, query, statusFilter]);
 
   const renderOrder = ({ item }: { item: AdminOrder }) => (
     <View style={styles.card}>
@@ -123,32 +82,11 @@ export default function AdminOrdersHistoryScreen() {
         <Text style={styles.sub}>Acilistan bugune {total} siparis</Text>
       </View>
 
-      <View style={styles.filterWrap}>
-        <TextInput
-          style={styles.searchInput}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Siparis no, restoran, musteri, adres ara"
-          placeholderTextColor="#94a3b8"
-        />
-        <View style={styles.chipRow}>
-          <Pressable style={[styles.chip, statusFilter === 'ALL' && styles.chipActive]} onPress={() => setStatusFilter('ALL')}><Text style={[styles.chipText, statusFilter === 'ALL' && styles.chipTextActive]}>Tum</Text></Pressable>
-          <Pressable style={[styles.chip, statusFilter === 'PENDING' && styles.chipActive]} onPress={() => setStatusFilter('PENDING')}><Text style={[styles.chipText, statusFilter === 'PENDING' && styles.chipTextActive]}>Bekliyor</Text></Pressable>
-          <Pressable style={[styles.chip, statusFilter === 'DELIVERED' && styles.chipActive]} onPress={() => setStatusFilter('DELIVERED')}><Text style={[styles.chipText, statusFilter === 'DELIVERED' && styles.chipTextActive]}>Teslim</Text></Pressable>
-          <Pressable style={[styles.chip, statusFilter === 'CANCELLED' && styles.chipActive]} onPress={() => setStatusFilter('CANCELLED')}><Text style={[styles.chipText, statusFilter === 'CANCELLED' && styles.chipTextActive]}>Iptal</Text></Pressable>
-        </View>
-        <View style={styles.chipRow}>
-          <Pressable style={[styles.chip, platformFilter === 'ALL' && styles.chipActive]} onPress={() => setPlatformFilter('ALL')}><Text style={[styles.chipText, platformFilter === 'ALL' && styles.chipTextActive]}>Tum Platformlar</Text></Pressable>
-          <Pressable style={[styles.chip, platformFilter === 'FEEDME' && styles.chipActive]} onPress={() => setPlatformFilter('FEEDME')}><Text style={[styles.chipText, platformFilter === 'FEEDME' && styles.chipTextActive]}>Feedme</Text></Pressable>
-          <Pressable style={[styles.chip, platformFilter === 'YEMEKSEPETI' && styles.chipActive]} onPress={() => setPlatformFilter('YEMEKSEPETI')}><Text style={[styles.chipText, platformFilter === 'YEMEKSEPETI' && styles.chipTextActive]}>Yemeksepeti</Text></Pressable>
-        </View>
-      </View>
-
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#7c3aed" />
       ) : (
         <FlatList
-          data={filteredOrders}
+          data={orders}
           keyExtractor={(item) => item.id}
           renderItem={renderOrder}
           contentContainerStyle={styles.list}
@@ -184,13 +122,6 @@ const styles = StyleSheet.create({
   topBar: { backgroundColor: '#fff', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#e2e8f0' },
   title: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
   sub: { marginTop: 2, fontSize: 12, color: '#64748b' },
-  filterWrap: { paddingHorizontal: 12, paddingTop: 10, gap: 8 },
-  searchInput: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: '#0f172a' },
-  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  chip: { backgroundColor: '#e2e8f0', borderRadius: 18, paddingHorizontal: 10, paddingVertical: 6 },
-  chipActive: { backgroundColor: '#7c3aed' },
-  chipText: { color: '#334155', fontSize: 11, fontWeight: '700' },
-  chipTextActive: { color: '#fff' },
   list: { padding: 12, gap: 10, paddingBottom: 24 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#e2e8f0' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },

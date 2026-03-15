@@ -1,25 +1,21 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './store/authStore';
-import { useCustomerStore } from './store/customerStore';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import CourierDashboard from './pages/CourierDashboard';
 import AdminDashboard from './pages/AdminDashboard';
-import MarketplacePage from './pages/MarketplacePage';
-import OrderTrackingPage from './pages/OrderTrackingPage';
-import CustomerLoginPage from './pages/CustomerLoginPage';
-import CustomerRegisterPage from './pages/CustomerRegisterPage';
-import CustomerProfilePage from './pages/CustomerProfilePage';
+import AdminLogsPage from './pages/AdminLogsPage';
+import RestaurantFinancialReportsPage from './pages/RestaurantFinancialReportsPage';
+import CourierFinancialReportsPage from './pages/CourierFinancialReportsPage';
 import PanelSelectPage from './pages/PanelSelectPage';
 
 function App() {
   const { isAuthenticated, user } = useAuthStore();
-  const { isAuthenticated: isCustomerAuth } = useCustomerStore();
 
   const getDashboard = () => {
     if (!isAuthenticated) return <Navigate to="/login" />;
-    
+
     switch (user?.role) {
       case 'ADMIN':
         return <AdminDashboard />;
@@ -32,6 +28,12 @@ function App() {
     }
   };
 
+  const requireRole = (role: 'ADMIN' | 'RESTAURANT' | 'COURIER', component: JSX.Element) => {
+    if (!isAuthenticated) return <Navigate to="/login" />;
+    if (user?.role !== role) return <Navigate to="/dashboard" />;
+    return component;
+  };
+
   return (
     <BrowserRouter
       future={{
@@ -40,11 +42,6 @@ function App() {
       }}
     >
       <Routes>
-        <Route path="/market" element={isCustomerAuth ? <MarketplacePage /> : <Navigate to="/customer/login" />} />
-        <Route path="/customer/profile" element={isCustomerAuth ? <CustomerProfilePage /> : <Navigate to="/customer/login" />} />
-        <Route path="/track-order" element={<OrderTrackingPage />} />
-        <Route path="/customer/login" element={!isCustomerAuth ? <CustomerLoginPage /> : <Navigate to="/market" />} />
-        <Route path="/customer/register" element={!isCustomerAuth ? <CustomerRegisterPage /> : <Navigate to="/market" />} />
         <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/dashboard" />} />
         <Route path="/register" element={!isAuthenticated ? <RegisterPage /> : <Navigate to="/dashboard" />} />
         <Route path="/panel-select" element={<PanelSelectPage />} />
@@ -53,6 +50,10 @@ function App() {
           path="/dashboard"
           element={getDashboard()}
         />
+
+        <Route path="/admin/logs" element={requireRole('ADMIN', <AdminLogsPage />)} />
+        <Route path="/restaurant/financial-reports" element={requireRole('RESTAURANT', <RestaurantFinancialReportsPage />)} />
+        <Route path="/courier/financial-reports" element={requireRole('COURIER', <CourierFinancialReportsPage />)} />
         
         <Route
           path="/"
@@ -61,9 +62,7 @@ function App() {
               to={
                 isAuthenticated
                   ? '/dashboard'
-                  : isCustomerAuth
-                    ? '/market'
-                    : '/panel-select'
+                  : '/panel-select'
               }
             />
           }

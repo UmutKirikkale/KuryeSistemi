@@ -15,6 +15,7 @@ import MapView, { Marker } from 'react-native-maps';
 import { useAuthStore } from '../../store/authStore';
 import { orderService, Order } from '../../services/orderService';
 import { locationService } from '../../services/locationService';
+import { wsService } from '../../services/websocket';
 
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'Bekliyor',
@@ -36,6 +37,13 @@ const STATUS_COLORS: Record<string, string> = {
   CANCELLED: '#dc2626'
 };
 
+const isValidCoordinate = (latitude: number, longitude: number) => (
+  Number.isFinite(latitude)
+  && Number.isFinite(longitude)
+  && Math.abs(latitude) <= 90
+  && Math.abs(longitude) <= 180
+);
+
 export default function CourierOrdersScreen() {
   const { user, logout } = useAuthStore();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -50,6 +58,16 @@ export default function CourierOrdersScreen() {
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED'>('ALL');
   const [platformFilter, setPlatformFilter] = useState<'ALL' | 'FEEDME' | 'YEMEKSEPETI'>('ALL');
   const [selectedRestaurantOrder, setSelectedRestaurantOrder] = useState<Order | null>(null);
+
+  const selectedRestaurantCoordinate = useMemo(() => {
+    const latitude = Number(selectedRestaurantOrder?.restaurant?.latitude);
+    const longitude = Number(selectedRestaurantOrder?.restaurant?.longitude);
+    if (!isValidCoordinate(latitude, longitude)) {
+      return null;
+    }
+
+    return { latitude, longitude };
+  }, [selectedRestaurantOrder?.restaurant?.latitude, selectedRestaurantOrder?.restaurant?.longitude]);
 
   const loadOrders = useCallback(async () => {
     try {
@@ -72,7 +90,22 @@ export default function CourierOrdersScreen() {
   useEffect(() => {
     loadOrders();
     const interval = setInterval(loadOrders, 15000);
-    return () => clearInterval(interval);
+
+    const onOrderStatusUpdate = () => {
+      void loadOrders();
+    };
+    const onNewOrder = () => {
+      void loadOrders();
+    };
+
+    wsService.onOrderStatusUpdate(onOrderStatusUpdate);
+    wsService.onNewOrder(onNewOrder);
+
+    return () => {
+      clearInterval(interval);
+      wsService.removeListener('order:status:update', onOrderStatusUpdate);
+      wsService.removeListener('order:new', onNewOrder);
+    };
   }, [loadOrders]);
 
   const visibleOrders = useMemo(() => {
@@ -181,7 +214,10 @@ export default function CourierOrdersScreen() {
             <Pressable
               style={[styles.btn, styles.btnMap]}
               onPress={() => {
-                if (item.restaurant?.latitude != null && item.restaurant?.longitude != null) {
+                const latitude = Number(item.restaurant?.latitude);
+                const longitude = Number(item.restaurant?.longitude);
+
+                if (isValidCoordinate(latitude, longitude)) {
                   setSelectedRestaurantOrder(item);
                 } else {
                   Alert.alert('Konum Yok', 'Bu siparis icin restoran konumu tanimli degil.');
@@ -373,23 +409,23 @@ export default function CourierOrdersScreen() {
               </Pressable>
             </View>
 
-            {selectedRestaurantOrder?.restaurant?.latitude != null && selectedRestaurantOrder?.restaurant?.longitude != null ? (
+            {selectedRestaurantCoordinate ? (
               <MapView
                 style={styles.restaurantMap}
                 initialRegion={{
-                  latitude: Number(selectedRestaurantOrder.restaurant.latitude),
-                  longitude: Number(selectedRestaurantOrder.restaurant.longitude),
+                  latitude: selectedRestaurantCoordinate.latitude,
+                  longitude: selectedRestaurantCoordinate.longitude,
                   latitudeDelta: 0.01,
                   longitudeDelta: 0.01
                 }}
               >
                 <Marker
                   coordinate={{
-                    latitude: Number(selectedRestaurantOrder.restaurant.latitude),
-                    longitude: Number(selectedRestaurantOrder.restaurant.longitude)
+                    latitude: selectedRestaurantCoordinate.latitude,
+                    longitude: selectedRestaurantCoordinate.longitude
                   }}
-                  title={selectedRestaurantOrder.restaurant.name || 'Restoran'}
-                  description={selectedRestaurantOrder.restaurant.address || 'Restoran adresi'}
+                  title={selectedRestaurantOrder?.restaurant?.name || 'Restoran'}
+                  description={selectedRestaurantOrder?.restaurant?.address || 'Restoran adresi'}
                   pinColor="#dc2626"
                 />
               </MapView>

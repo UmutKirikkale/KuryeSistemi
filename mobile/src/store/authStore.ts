@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { api } from '../services/api';
 import { authService, AuthUser } from '../services/authService';
+import { wsService } from '../services/websocket';
 
 interface AuthState {
   user: AuthUser | null;
@@ -10,6 +11,21 @@ interface AuthState {
   isLoading: boolean;
   isHydrated: boolean;
   error: string | null;
+  register: (payload: {
+    email: string;
+    password: string;
+    name: string;
+    phone?: string;
+    role: 'RESTAURANT' | 'COURIER';
+    restaurantData?: {
+      name: string;
+      address: string;
+      phone: string;
+    };
+    courierData?: {
+      vehicleType?: string;
+    };
+  }) => Promise<AuthUser>;
   login: (email: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
   hydrate: () => Promise<void>;
@@ -26,6 +42,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   isHydrated: false,
   error: null,
 
+  register: async (payload) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authService.register(payload);
+      await AsyncStorage.setItem(TOKEN_KEY, response.token);
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
+
+      api.defaults.headers.common.Authorization = `Bearer ${response.token}`;
+      wsService.connect(response.token);
+
+      set({
+        user: response.user,
+        token: response.token,
+        isAuthenticated: true,
+        isLoading: false,
+        isHydrated: true,
+        error: null
+      });
+
+      return response.user;
+    } catch (error: any) {
+      set({
+        isLoading: false,
+        error: error?.response?.data?.error || 'Kayit basarisiz'
+      });
+      throw error;
+    }
+  },
+
   login: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -34,6 +79,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(response.user));
 
       api.defaults.headers.common.Authorization = `Bearer ${response.token}`;
+      wsService.connect(response.token);
 
       set({
         user: response.user,
@@ -55,6 +101,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    wsService.disconnect();
     delete api.defaults.headers.common.Authorization;
 
     set({
@@ -86,6 +133,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const user = JSON.parse(userStr) as AuthUser;
       api.defaults.headers.common.Authorization = `Bearer ${token}`;
+      wsService.connect(token);
       set({
         user,
         token,

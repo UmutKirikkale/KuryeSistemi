@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { financialService } from '../../services/financialService';
+import FinancialReportSection from '../../components/FinancialReportSection';
 
 export default function CourierEarningsScreen() {
   const [data, setData] = useState<{ summary: any; orders: any[] } | null>(null);
@@ -141,6 +142,8 @@ export default function CourierEarningsScreen() {
               <Text style={styles.rowAmount}>+{o.earning.toFixed(2)} ₺</Text>
             </View>
           ))}
+
+          <FinancialReportSection role="COURIER" />
 
           <View style={styles.settlementSection}>
             <Text style={styles.sectionTitle}>Gunluk Hesap Kapama</Text>

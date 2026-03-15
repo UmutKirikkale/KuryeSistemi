@@ -20,6 +20,10 @@ export default function RestaurantMenuScreen() {
   const [uncategorizedItems, setUncategorizedItems] = useState<RestaurantMenuItem[]>([]);
   const [categoryName, setCategoryName] = useState('');
   const [itemForm, setItemForm] = useState({ name: '', description: '', price: '', categoryId: '' });
+  const [editItem, setEditItem] = useState<RestaurantMenuItem | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', description: '', price: '' });
+  const [editCategoryId, setEditCategoryId] = useState<string | null>(null);
+  const [editCategoryName, setEditCategoryName] = useState('');
 
   const load = useCallback(async () => {
     try {
@@ -104,6 +108,48 @@ export default function RestaurantMenuScreen() {
     }
   };
 
+  const handleOpenEdit = (item: RestaurantMenuItem) => {
+    setEditItem(item);
+    setEditForm({ name: item.name, description: item.description || '', price: String(item.price) });
+  };
+
+  const handleSaveCategory = async () => {
+    if (!editCategoryId || !editCategoryName.trim()) return;
+    setSaving(true);
+    try {
+      await restaurantService.updateCategory(editCategoryId, { name: editCategoryName.trim() });
+      setEditCategoryId(null);
+      await load();
+    } catch {
+      Alert.alert('Hata', 'Kategori güncellenemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editItem) return;
+    const price = Number(editForm.price);
+    if (!editForm.name.trim() || isNaN(price) || price <= 0) {
+      Alert.alert('Hata', 'Geçerli ad ve fiyat giriniz');
+      return;
+    }
+    setSaving(true);
+    try {
+      await restaurantService.updateMenuItem(editItem.id, {
+        name: editForm.name.trim(),
+        description: editForm.description.trim() || undefined,
+        price,
+      });
+      setEditItem(null);
+      await load();
+    } catch {
+      Alert.alert('Hata', 'Ürün güncellenemedi');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const renderItemCard = (item: RestaurantMenuItem) => (
     <View key={item.id} style={styles.itemCard}>
       <View style={styles.itemHeader}>
@@ -116,6 +162,9 @@ export default function RestaurantMenuScreen() {
       <View style={styles.itemActions}>
         <Pressable style={[styles.smallButton, item.isAvailable ? styles.green : styles.orange]} onPress={() => handleToggleAvailability(item)}>
           <Text style={styles.smallButtonText}>{item.isAvailable ? 'Aktif' : 'Pasif'}</Text>
+        </Pressable>
+        <Pressable style={[styles.smallButton, styles.blue]} onPress={() => handleOpenEdit(item)}>
+          <Text style={styles.smallButtonText}>Düzenle</Text>
         </Pressable>
         <Pressable style={[styles.smallButton, styles.red]} onPress={() => handleDeleteItem(item.id)}>
           <Text style={styles.smallButtonText}>Sil</Text>
@@ -131,6 +180,49 @@ export default function RestaurantMenuScreen() {
     >
       <Text style={styles.title}>Menu Yonetimi</Text>
       <Text style={styles.subtitle}>Web paneldeki menu operasyonlarinin mobil ozeti</Text>
+
+      {/* Edit category modal */}
+      {editCategoryId && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.sectionTitle}>Kategori Adını Düzenle</Text>
+            <TextInput
+              style={styles.input}
+              value={editCategoryName}
+              onChangeText={setEditCategoryName}
+              placeholder="Kategori adı"
+            />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable style={[styles.primaryButton, { flex: 1 }, saving && styles.disabled]} onPress={handleSaveCategory} disabled={saving}>
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kaydet</Text>}
+              </Pressable>
+              <Pressable style={[styles.primaryButton, { flex: 1, backgroundColor: '#6b7280' }]} onPress={() => setEditCategoryId(null)}>
+                <Text style={styles.primaryText}>İptal</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* Edit item modal */}
+      {editItem && (
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <Text style={styles.sectionTitle}>Ürünü Düzenle</Text>
+            <TextInput style={styles.input} placeholder="Ürün adı" value={editForm.name} onChangeText={v => setEditForm(p => ({ ...p, name: v }))} />
+            <TextInput style={styles.input} placeholder="Açıklama" value={editForm.description} onChangeText={v => setEditForm(p => ({ ...p, description: v }))} />
+            <TextInput style={styles.input} placeholder="Fiyat" value={editForm.price} onChangeText={v => setEditForm(p => ({ ...p, price: v }))} keyboardType="decimal-pad" />
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Pressable style={[styles.primaryButton, { flex: 1 }, saving && styles.disabled]} onPress={handleSaveEdit} disabled={saving}>
+                {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryText}>Kaydet</Text>}
+              </Pressable>
+              <Pressable style={[styles.primaryButton, { flex: 1, backgroundColor: '#6b7280' }]} onPress={() => setEditItem(null)}>
+                <Text style={styles.primaryText}>İptal</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
 
       {loading ? (
         <ActivityIndicator size="large" color="#1d4ed8" style={{ marginTop: 40 }} />
@@ -165,7 +257,10 @@ export default function RestaurantMenuScreen() {
           {categories.map((category) => (
             <View key={category.id} style={styles.section}>
               <View style={styles.categoryHeader}>
-                <Text style={styles.sectionTitle}>{category.name}</Text>
+                <Text style={[styles.sectionTitle, { flex: 1, marginBottom: 0 }]}>{category.name}</Text>
+                <Pressable style={[styles.smallButton, styles.blue, { marginRight: 6 }]} onPress={() => { setEditCategoryId(category.id); setEditCategoryName(category.name); }}>
+                  <Text style={styles.smallButtonText}>Düzenle</Text>
+                </Pressable>
                 <Pressable style={[styles.smallButton, styles.red]} onPress={() => handleDeleteCategory(category.id)}>
                   <Text style={styles.smallButtonText}>Sil</Text>
                 </Pressable>
@@ -205,5 +300,8 @@ const styles = StyleSheet.create({
   green: { backgroundColor: '#16a34a' },
   orange: { backgroundColor: '#d97706' },
   red: { backgroundColor: '#dc2626' },
-  empty: { color: '#94a3b8' }
+  blue: { backgroundColor: '#2563eb' },
+  empty: { color: '#94a3b8' },
+  modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 24, zIndex: 100 },
+  modalCard: { backgroundColor: '#fff', borderRadius: 16, padding: 20 },
 });

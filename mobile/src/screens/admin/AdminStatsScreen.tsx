@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { adminService, DashboardStats } from '../../services/adminService';
+import { wsService } from '../../services/websocket';
 import AdminHeader from '../../components/AdminHeader';
 
 type OrderPeriod = 'daily' | 'weekly' | 'monthly';
@@ -113,6 +114,27 @@ export default function AdminStatsScreen({ navigation }: any) {
   useEffect(() => {
     loadRecentSettlements(settlementPeriod);
   }, [loadRecentSettlements, settlementPeriod]);
+
+  useEffect(() => {
+    const onOrderStatusUpdate = () => {
+      void load();
+      void loadRecentOrders(orderPeriod);
+      void loadRecentSettlements(settlementPeriod);
+    };
+
+    const onNewOrder = () => {
+      void load();
+      void loadRecentOrders(orderPeriod);
+    };
+
+    wsService.onOrderStatusUpdate(onOrderStatusUpdate);
+    wsService.onNewOrder(onNewOrder);
+
+    return () => {
+      wsService.removeListener('order:status:update', onOrderStatusUpdate);
+      wsService.removeListener('order:new', onNewOrder);
+    };
+  }, [load, loadRecentOrders, loadRecentSettlements, orderPeriod, settlementPeriod]);
 
 
   const tiles: { label: string; key: keyof DashboardStats; color: string; bg: string }[] = [

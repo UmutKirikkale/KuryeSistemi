@@ -176,6 +176,35 @@ export const adminService = {
     return response.data;
   },
 
+  getCourierPerformanceReport: async (courierId: string, days = 7) => {
+    const response = await api.get(`/admin/couriers/${courierId}/performance`, { params: { days } });
+    return response.data;
+  },
+
+  getSystemLogs: async (limit = 50) => {
+    const response = await api.get<{ logs: Array<{ id: string; type: string; action: string; description: string; timestamp: string }> }>('/admin/logs', { params: { limit } });
+    return response.data;
+  },
+
+  getSystemSettings: async () => {
+    const response = await api.get<{ settings: { courierAutoBusyAfterOrders: number; platformCommissionTemplates: { YEMEKSEPETI: number; FEEDME: number; GETIRYEMEK: number; TRENDYOLYEMEK: number; DIGER: number } } }>('/admin/settings');
+    return response.data;
+  },
+
+  updateSystemSettings: async (data: {
+    courierAutoBusyAfterOrders: number;
+    platformCommissionTemplates: {
+      YEMEKSEPETI: number;
+      FEEDME: number;
+      GETIRYEMEK: number;
+      TRENDYOLYEMEK: number;
+      DIGER: number;
+    };
+  }) => {
+    const response = await api.patch('/admin/settings', data);
+    return response.data;
+  },
+
   resetAllData: async () => {
     const response = await api.post('/admin/reset-all-data');
     return response.data;

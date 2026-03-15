@@ -1,5 +1,7 @@
 export type RootStackParamList = {
+  PublicHome: undefined;
   Login: undefined;
+  Register: undefined;
   CourierTabs: undefined;
   RestaurantTabs: undefined;
   AdminTabs: undefined;
@@ -20,12 +22,23 @@ export type RestaurantTabParamList = {
   RestaurantMenu: undefined;
 };
 
+export type CustomerTabParamList = {
+  Marketplace: undefined;
+  CustomerOrderTracking: { orderNumber?: string } | undefined;
+  CustomerProfile: undefined;
+};
+
 export type AdminTabParamList = {
   AdminStats: undefined;
   AdminOrderHistory: undefined;
   AdminUsers: undefined;
   AdminCouriers: undefined;
   AdminRestaurants: undefined;
+  AdminFinancial: undefined;
+  AdminCourierMap: undefined;
+  AdminSettings: undefined;
+  AdminSettlement: undefined;
+  AdminLogs: undefined;
 };
 
 export type AdminStackParamList = {

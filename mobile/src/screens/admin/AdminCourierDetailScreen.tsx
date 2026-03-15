@@ -1,10 +1,27 @@
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { adminService } from '../../services/adminService';
+
+interface PerformanceReport {
+  courier: { name: string; email: string; paymentPerOrder: number };
+  summary: {
+    totalAssigned: number;
+    deliveredCount: number;
+    cancelledCount: number;
+    cancelRate: number;
+    averageDeliveryMinutes: number;
+    totalEarnings: number;
+  };
+  dailyEarnings: Array<{ date: string; deliveries: number; earnings: number }>;
+  cancelReasons: Array<{ reason: string; count: number }>;
+}
 export default function AdminCourierDetailScreen({ route, navigation }: any) {
   const [courier, setCourier] = useState(route.params.courier);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [perfLoading, setPerfLoading] = useState(false);
+  const [performance, setPerformance] = useState<PerformanceReport | null>(null);
+  const [perfDays, setPerfDays] = useState('7');
   const [name, setName] = useState(courier.name || courier.user?.name || '');
   const [phone, setPhone] = useState(courier.user?.phone || '');
   const [vehicleType, setVehicleType] = useState(courier.vehicleType || '');
@@ -47,6 +64,20 @@ export default function AdminCourierDetailScreen({ route, navigation }: any) {
       Alert.alert('Hata', error?.response?.data?.message || error?.response?.data?.error || 'Kurye guncellenemedi');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleLoadPerformance = async () => {
+    const days = parseInt(perfDays, 10);
+    if (isNaN(days) || days < 1) { Alert.alert('Hata', 'Geçerli gün sayısı girin'); return; }
+    setPerfLoading(true);
+    try {
+      const report = await adminService.getCourierPerformanceReport(courier.user?.id || courier.id, days);
+      setPerformance(report.report ?? report);
+    } catch (e: any) {
+      Alert.alert('Hata', e?.response?.data?.error || 'Rapor yüklenemedi');
+    } finally {
+      setPerfLoading(false);
     }
   };
 

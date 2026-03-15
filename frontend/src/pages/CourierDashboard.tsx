@@ -184,6 +184,9 @@ export default function CourierDashboard() {
               <p className="text-sm text-gray-600">Hoş geldiniz, {user?.name}</p>
             </div>
             <div className="flex items-center gap-4">
+              <a href="/courier/financial-reports" className="btn btn-secondary">
+                Gunluk/Aylik Rapor
+              </a>
               <button
                 onClick={handleToggleAvailability}
                 className={`btn flex items-center gap-2 ${

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import MapView, { Marker, Region } from 'react-native-maps';
 import { restaurantService } from '../../services/restaurantService';
+import { wsService } from '../../services/websocket';
 
 interface CourierLocation {
   courierId: string;
@@ -21,6 +22,13 @@ interface CourierLocation {
   longitude: number;
   updatedAt?: string;
 }
+
+const isValidCoordinate = (latitude: number, longitude: number) => (
+  Number.isFinite(latitude)
+  && Number.isFinite(longitude)
+  && Math.abs(latitude) <= 90
+  && Math.abs(longitude) <= 180
+);
 
 export default function RestaurantMapScreen() {
   const [loading, setLoading] = useState(true);
@@ -52,7 +60,7 @@ export default function RestaurantMapScreen() {
     const lat = Number(latitude);
     const lng = Number(longitude);
 
-    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    if (isValidCoordinate(lat, lng)) {
       return {
         latitude: lat,
         longitude: lng,
@@ -76,7 +84,9 @@ export default function RestaurantMapScreen() {
         restaurantService.getCourierLocations()
       ]);
       setProfile(profileRes.restaurant);
-      setCouriers(courierRes.couriers || []);
+      setCouriers((courierRes.couriers || []).filter((courier: CourierLocation) => (
+        isValidCoordinate(Number(courier.latitude), Number(courier.longitude))
+      )));
       setLatitude(profileRes.restaurant?.latitude != null ? String(profileRes.restaurant.latitude) : '');
       setLongitude(profileRes.restaurant?.longitude != null ? String(profileRes.restaurant.longitude) : '');
     } catch {
@@ -90,7 +100,43 @@ export default function RestaurantMapScreen() {
   useEffect(() => {
     load();
     const interval = setInterval(load, 15000);
-    return () => clearInterval(interval);
+
+    const onLocationUpdate = (data: {
+      courierId: string;
+      courierName?: string;
+      latitude: number;
+      longitude: number;
+    }) => {
+      setCouriers((prev) => {
+        if (!isValidCoordinate(Number(data.latitude), Number(data.longitude))) {
+          return prev;
+        }
+
+        const existingIndex = prev.findIndex((item) => item.courierId === data.courierId);
+        const nextItem: CourierLocation = {
+          courierId: data.courierId,
+          courierName: data.courierName || prev[existingIndex]?.courierName,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          updatedAt: new Date().toISOString()
+        };
+
+        if (existingIndex === -1) {
+          return [...prev, nextItem];
+        }
+
+        const next = [...prev];
+        next[existingIndex] = nextItem;
+        return next;
+      });
+    };
+
+    wsService.onLocationUpdate(onLocationUpdate);
+
+    return () => {
+      clearInterval(interval);
+      wsService.removeListener('courier:location:broadcast', onLocationUpdate);
+    };
   }, [load]);
 
   const handleSaveLocation = async () => {

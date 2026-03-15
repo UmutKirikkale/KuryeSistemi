@@ -12,6 +12,11 @@ import AdminCourierDetailScreen from '../screens/admin/AdminCourierDetailScreen'
 import AdminRestaurantDetailScreen from '../screens/admin/AdminRestaurantDetailScreen';
 import AdminCreateCourierScreen from '../screens/admin/AdminCreateCourierScreen';
 import AdminCreateRestaurantScreen from '../screens/admin/AdminCreateRestaurantScreen';
+import AdminFinancialScreen from '../screens/admin/AdminFinancialScreen';
+import AdminCourierMapScreen from '../screens/admin/AdminCourierMapScreen';
+import AdminSettingsScreen from '../screens/admin/AdminSettingsScreen';
+import AdminSettlementScreen from '../screens/admin/AdminSettlementScreen';
+import AdminLogsScreen from '../screens/admin/AdminLogsScreen';
 
 const Tab = createBottomTabNavigator<AdminTabParamList>();
 const Stack = createNativeStackNavigator<AdminStackParamList>();
@@ -43,6 +48,31 @@ function AdminTabs() {
         name="AdminRestaurants"
         component={AdminRestaurantsScreen}
         options={{ tabBarLabel: 'Restoranlar', tabBarIcon: () => <Text>🍽️</Text> }}
+      />
+      <Tab.Screen
+        name="AdminFinancial"
+        component={AdminFinancialScreen}
+        options={{ tabBarLabel: 'Finans', tabBarIcon: () => <Text>💰</Text> }}
+      />
+      <Tab.Screen
+        name="AdminCourierMap"
+        component={AdminCourierMapScreen}
+        options={{ tabBarLabel: 'Harita', tabBarIcon: () => <Text>🗺️</Text> }}
+      />
+      <Tab.Screen
+        name="AdminSettings"
+        component={AdminSettingsScreen}
+        options={{ tabBarLabel: 'Ayarlar', tabBarIcon: () => <Text>⚙️</Text> }}
+      />
+      <Tab.Screen
+        name="AdminSettlement"
+        component={AdminSettlementScreen}
+        options={{ tabBarLabel: 'Mutabakat', tabBarIcon: () => <Text>📄</Text> }}
+      />
+      <Tab.Screen
+        name="AdminLogs"
+        component={AdminLogsScreen}
+        options={{ tabBarLabel: 'Loglar', tabBarIcon: () => <Text>📋</Text> }}
       />
     </Tab.Navigator>
   );

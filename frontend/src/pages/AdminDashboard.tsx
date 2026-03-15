@@ -767,6 +767,9 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <a href="/admin/logs" className="btn btn-secondary">
+                Sistem Loglari
+              </a>
               <button
                 onClick={handleLogout}
                 className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
