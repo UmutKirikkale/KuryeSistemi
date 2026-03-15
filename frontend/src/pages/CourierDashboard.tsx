@@ -329,10 +329,10 @@ export default function CourierDashboard() {
                       <tr key={row.restaurantId} className="border-b last:border-0">
                         <td className="py-2 pr-4 font-medium">{row.restaurantName}</td>
                         <td className="py-2 pr-4">{row.packageCount}</td>
-                        <td className="py-2 pr-4">{row.grossAmount.toFixed(2)} ₺</td>
-                        <td className="py-2 pr-4">{row.commissionAmount.toFixed(2)} ₺</td>
-                        <td className="py-2 pr-4">{row.courierFeeAmount.toFixed(2)} ₺</td>
-                        <td className="py-2 pr-4 font-semibold">{row.amountToRestaurant.toFixed(2)} ₺</td>
+                        <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.grossAmount.toFixed(2)} ₺</td>
+                        <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.commissionAmount.toFixed(2)} ₺</td>
+                        <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.courierFeeAmount.toFixed(2)} ₺</td>
+                        <td className={`py-2 pr-4 font-semibold ${row.isClosed ? 'text-gray-400' : ''}`}>{row.isClosed ? '0.00' : row.amountToRestaurant.toFixed(2)} ₺</td>
                         <td className="py-2">
                           <span className={`px-2 py-1 rounded text-xs ${row.isClosed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
                             {row.isClosed ? 'Kapalı' : 'Açık'}

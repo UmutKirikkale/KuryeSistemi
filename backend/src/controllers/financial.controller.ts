@@ -111,15 +111,17 @@ const getCourierDailySettlementSummary = async (courierId: string, dateInput?: s
     isClosed: closedRestaurantIds.has(item.restaurantId)
   }));
 
+  const openRows = rows.filter((item) => !item.isClosed);
+
   const totals = {
     totalRestaurants: rows.length,
-    totalPackages: rows.reduce((sum, item) => sum + item.packageCount, 0),
-    totalGrossAmount: rows.reduce((sum, item) => sum + item.grossAmount, 0),
-    totalCommissionAmount: rows.reduce((sum, item) => sum + item.commissionAmount, 0),
-    totalCourierFeeAmount: rows.reduce((sum, item) => sum + item.courierFeeAmount, 0),
-    totalAmountToRestaurant: rows.reduce((sum, item) => sum + item.amountToRestaurant, 0),
+    totalPackages: openRows.reduce((sum, item) => sum + item.packageCount, 0),
+    totalGrossAmount: openRows.reduce((sum, item) => sum + item.grossAmount, 0),
+    totalCommissionAmount: openRows.reduce((sum, item) => sum + item.commissionAmount, 0),
+    totalCourierFeeAmount: openRows.reduce((sum, item) => sum + item.courierFeeAmount, 0),
+    totalAmountToRestaurant: openRows.reduce((sum, item) => sum + item.amountToRestaurant, 0),
     closedRestaurants: rows.filter((item) => item.isClosed).length,
-    openRestaurants: rows.filter((item) => !item.isClosed).length
+    openRestaurants: openRows.length
   };
 
   return {

@@ -172,7 +172,7 @@ export default function CourierEarningsScreen() {
                   <Text style={styles.rowSub}>{row.packageCount} paket</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={styles.rowAmount}>{Number(row.amountToRestaurant || 0).toFixed(2)} ₺</Text>
+                  <Text style={[styles.rowAmount, row.isClosed && { color: '#94a3b8', textDecorationLine: 'line-through' }]}>{row.isClosed ? '0.00' : Number(row.amountToRestaurant || 0).toFixed(2)} ₺</Text>
                   <Text style={styles.rowSub}>{row.isClosed ? 'Kapali' : 'Acik'}</Text>
                   <Pressable
                     style={[styles.rowActionBtn, row.isClosed ? styles.rowActionOpen : styles.rowActionClose, closing && styles.closeButtonDisabled]}
