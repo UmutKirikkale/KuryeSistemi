@@ -25,6 +25,7 @@ export default function CourierDashboard() {
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [closingSettlement, setClosingSettlement] = useState(false);
   const [orderPeriod, setOrderPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [orderDate, setOrderDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [orderQuery, setOrderQuery] = useState('');
   const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
   const [orderPlatformFilter, setOrderPlatformFilter] = useState('ALL');
@@ -65,8 +66,12 @@ export default function CourierDashboard() {
 
   useEffect(() => {
     periodRef.current = orderPeriod;
-    fetchOrders({ limit: 100, period: orderPeriod });
-  }, [fetchOrders, orderPeriod]);
+    if (orderPeriod === 'daily') {
+      fetchOrders({ limit: 100, date: orderDate });
+    } else {
+      fetchOrders({ limit: 100, period: orderPeriod });
+    }
+  }, [fetchOrders, orderPeriod, orderDate]);
 
   const loadEarnings = async () => {
     try {
@@ -392,6 +397,15 @@ export default function CourierDashboard() {
               >
                 Aylık
               </button>
+              {orderPeriod === 'daily' && (
+                <input
+                  type="date"
+                  className="input text-sm"
+                  value={orderDate}
+                  onChange={(e) => setOrderDate(e.target.value)}
+                  title="Sipariş tarihi seç"
+                />
+              )}
             </div>
           </div>
 

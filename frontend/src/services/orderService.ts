@@ -22,7 +22,7 @@ export const orderService = {
     return response.data;
   },
 
-  getOrders: async (params?: { status?: string; page?: number; limit?: number; period?: 'daily' | 'weekly' | 'monthly' }) => {
+  getOrders: async (params?: { status?: string; page?: number; limit?: number; period?: 'daily' | 'weekly' | 'monthly'; date?: string }) => {
     const response = await api.get('/orders', { params });
     return response.data;
   },

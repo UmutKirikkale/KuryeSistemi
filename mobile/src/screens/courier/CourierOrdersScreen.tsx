@@ -45,6 +45,7 @@ export default function CourierOrdersScreen() {
   const [isAvailable, setIsAvailable] = useState<boolean>(false);
   const [filter, setFilter] = useState<'ALL' | 'POOL' | 'MINE' | 'COMPLETED'>('ALL');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED'>('ALL');
   const [platformFilter, setPlatformFilter] = useState<'ALL' | 'FEEDME' | 'YEMEKSEPETI'>('ALL');
@@ -52,7 +53,13 @@ export default function CourierOrdersScreen() {
 
   const loadOrders = useCallback(async () => {
     try {
-      const data = await orderService.getOrders({ limit: 50, period });
+      const params: { limit: number; date?: string; period?: 'daily' | 'weekly' | 'monthly' } = { limit: 50 };
+      if (period === 'daily') {
+        params.date = selectedDate;
+      } else {
+        params.period = period;
+      }
+      const data = await orderService.getOrders(params);
       setOrders(data.orders);
     } catch {
       Alert.alert('Hata', 'Siparisler yuklenemedi');
@@ -60,7 +67,7 @@ export default function CourierOrdersScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [period]);
+  }, [period, selectedDate]);
 
   useEffect(() => {
     loadOrders();
@@ -269,6 +276,18 @@ export default function CourierOrdersScreen() {
         </Pressable>
       </View>
 
+      {period === 'daily' && (
+        <TextInput
+          style={styles.dateInput}
+          value={selectedDate}
+          onChangeText={setSelectedDate}
+          placeholder="YYYY-AA-GG"
+          placeholderTextColor="#94a3b8"
+          selectionColor="#0f766e"
+          keyboardType="numeric"
+        />
+      )}
+
       <View style={styles.filterRow}>
         <Pressable style={[styles.filterChip, filter === 'ALL' && styles.filterChipActive]} onPress={() => setFilter('ALL')}>
           <Text style={[styles.filterText, filter === 'ALL' && styles.filterTextActive]}>Tum</Text>
@@ -415,6 +434,7 @@ const styles = StyleSheet.create({
   filterText: { color: '#334155', fontWeight: '600', fontSize: 12 },
   filterTextActive: { color: '#fff' },
   searchInput: { marginHorizontal: 12, marginTop: 10, marginBottom: 2, backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  dateInput: { marginHorizontal: 12, marginTop: 6, marginBottom: 4, backgroundColor: '#fff', color: '#0f172a', borderWidth: 1, borderColor: '#0f766e', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontWeight: '600' as const },
   list: { padding: 12, gap: 10 },
   card: { backgroundColor: '#fff', borderRadius: 12, padding: 14, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },

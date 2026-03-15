@@ -275,7 +275,7 @@ export const createOrder = async (req: AuthRequest, res: Response): Promise<any>
 
 export const getOrders = async (req: AuthRequest, res: Response) => {
   try {
-    const { status, page = '1', limit = '10', period } = req.query;
+    const { status, page = '1', limit = '10', period, date } = req.query;
 
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -309,7 +309,18 @@ export const getOrders = async (req: AuthRequest, res: Response) => {
     }
 
     const now = new Date();
-    const selectedPeriod = typeof period === 'string' ? period : undefined;
+    const selectedDate = typeof date === 'string' && date ? date : null;
+    if (selectedDate) {
+      const dayStart = new Date(selectedDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const nextDay = new Date(dayStart);
+      nextDay.setDate(nextDay.getDate() + 1);
+      whereClause.createdAt = {
+        gte: dayStart,
+        lt: nextDay
+      };
+    }
+    const selectedPeriod = selectedDate ? undefined : (typeof period === 'string' ? period : undefined);
     if (selectedPeriod === 'daily') {
       const dayStart = new Date(now);
       dayStart.setHours(0, 0, 0, 0);
