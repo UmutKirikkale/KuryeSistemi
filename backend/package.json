@@ -10,6 +10,7 @@
     "test": "NODE_ENV=test jest --runInBand",
     "posttest": "npm run seed:demo",
     "seed:demo": "ts-node src/scripts/seedDemoUsers.ts",
+    "backfill:settlements:cash-only": "node scripts/backfillCourierSettlementsCashOnly.js",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio"

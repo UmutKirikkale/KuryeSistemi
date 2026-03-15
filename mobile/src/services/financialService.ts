@@ -41,19 +41,25 @@ export const financialService = {
           restaurantId: string;
           restaurantName: string;
           packageCount: number;
+          settlementPackageCount: number;
+          cardPackageCount: number;
           grossAmount: number;
           commissionAmount: number;
           courierFeeAmount: number;
           amountToRestaurant: number;
+          directCardAmount: number;
+          needsSettlement: boolean;
           isClosed: boolean;
         }>;
         totals: {
           totalRestaurants: number;
           totalPackages: number;
+          totalCardPackages: number;
           totalGrossAmount: number;
           totalCommissionAmount: number;
           totalCourierFeeAmount: number;
           totalAmountToRestaurant: number;
+          totalDirectCardAmount: number;
           closedRestaurants: number;
           openRestaurants: number;
         };

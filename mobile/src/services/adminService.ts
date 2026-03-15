@@ -98,6 +98,40 @@ export const adminService = {
     return response.data;
   },
 
+  getCourierSettlementClosings: async (params?: {
+    startDate?: string;
+    endDate?: string;
+    courierId?: string;
+    restaurantId?: string;
+    limit?: number;
+  }) => {
+    const response = await api.get('/admin/couriers/settlements/closings', { params });
+    return response.data as {
+      summary: {
+        totalRecords: number;
+        totalClosedAmount: number;
+        startDate?: string | null;
+        endDate?: string | null;
+      };
+      settlements: Array<{
+        id: string;
+        amount: number;
+        date: string;
+        dayKey?: string | null;
+        packageCount?: number | null;
+        restaurant?: {
+          id: string;
+          name: string;
+        } | null;
+        courier?: {
+          id: string;
+          name: string;
+          email: string;
+        } | null;
+      }>;
+    };
+  },
+
   createCourier: async (data: AdminCourierPayload) => {
     const response = await api.post('/admin/couriers', data);
     return response.data;

@@ -24,7 +24,7 @@ const getDayBounds = (dateInput?: string) => {
 const getCourierDailySettlementSummary = async (courierId: string, dateInput?: string) => {
   const { targetDate, startOfDay, endOfDay, dayKey } = getDayBounds(dateInput);
 
-  const deliveredCashOrders = await prisma.order.findMany({
+  const deliveredOrders = await prisma.order.findMany({
     where: {
       courierId,
       status: 'DELIVERED',
@@ -48,29 +48,46 @@ const getCourierDailySettlementSummary = async (courierId: string, dateInput?: s
     restaurantId: string;
     restaurantName: string;
     packageCount: number;
+    settlementPackageCount: number;
+    cardPackageCount: number;
     grossAmount: number;
     commissionAmount: number;
     courierFeeAmount: number;
     amountToRestaurant: number;
+    directCardAmount: number;
+    needsSettlement: boolean;
   }>();
 
-  deliveredCashOrders.forEach((order: any) => {
+  deliveredOrders.forEach((order: any) => {
     const restaurantId = order.restaurantId;
+    const isCardPayment = order.paymentMethod === 'CARD';
     const existing = grouped.get(restaurantId) || {
       restaurantId,
       restaurantName: order.restaurant?.name || 'Restoran',
       packageCount: 0,
+      settlementPackageCount: 0,
+      cardPackageCount: 0,
       grossAmount: 0,
       commissionAmount: 0,
       courierFeeAmount: 0,
-      amountToRestaurant: 0
+      amountToRestaurant: 0,
+      directCardAmount: 0,
+      needsSettlement: false
     };
 
     existing.packageCount += 1;
-    existing.grossAmount += order.orderAmount || 0;
-    existing.commissionAmount += order.commissionAmount || 0;
-    existing.courierFeeAmount += order.courierFee || 0;
-    existing.amountToRestaurant += (order.orderAmount || 0) - (order.commissionAmount || 0) - (order.courierFee || 0);
+
+    if (isCardPayment) {
+      existing.cardPackageCount += 1;
+      existing.directCardAmount += order.orderAmount || 0;
+    } else {
+      existing.settlementPackageCount += 1;
+      existing.grossAmount += order.orderAmount || 0;
+      existing.commissionAmount += order.commissionAmount || 0;
+      existing.courierFeeAmount += order.courierFee || 0;
+      existing.amountToRestaurant += (order.orderAmount || 0) - (order.commissionAmount || 0) - (order.courierFee || 0);
+      existing.needsSettlement = true;
+    }
 
     grouped.set(restaurantId, existing);
   });
@@ -107,15 +124,17 @@ const getCourierDailySettlementSummary = async (courierId: string, dateInput?: s
     isClosed: closedRestaurantIds.has(item.restaurantId)
   }));
 
-  const openRows = rows.filter((item) => !item.isClosed);
+  const openRows = rows.filter((item) => !item.isClosed && item.needsSettlement);
 
   const totals = {
     totalRestaurants: rows.length,
-    totalPackages: openRows.reduce((sum, item) => sum + item.packageCount, 0),
+    totalPackages: openRows.reduce((sum, item) => sum + item.settlementPackageCount, 0),
+    totalCardPackages: rows.reduce((sum, item) => sum + item.cardPackageCount, 0),
     totalGrossAmount: openRows.reduce((sum, item) => sum + item.grossAmount, 0),
     totalCommissionAmount: openRows.reduce((sum, item) => sum + item.commissionAmount, 0),
     totalCourierFeeAmount: openRows.reduce((sum, item) => sum + item.courierFeeAmount, 0),
     totalAmountToRestaurant: openRows.reduce((sum, item) => sum + item.amountToRestaurant, 0),
+    totalDirectCardAmount: rows.reduce((sum, item) => sum + item.directCardAmount, 0),
     closedRestaurants: rows.filter((item) => item.isClosed).length,
     openRestaurants: openRows.length
   };
@@ -529,7 +548,7 @@ export const closeCourierDailySettlement = async (req: AuthRequest, res: Respons
             transactionType: 'COURIER_SETTLEMENT',
             amount: row.amountToRestaurant,
             restaurantId: row.restaurantId,
-            description: `courier:${req.userId}|date:${report.dayKey}|restaurant:${row.restaurantId}|packages:${row.packageCount}`,
+            description: `courier:${req.userId}|date:${report.dayKey}|restaurant:${row.restaurantId}|packages:${row.settlementPackageCount}`,
             date: new Date()
           }
         })

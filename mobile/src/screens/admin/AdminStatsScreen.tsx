@@ -26,8 +26,41 @@ export default function AdminStatsScreen({ navigation }: any) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [orderPeriod, setOrderPeriod] = useState<OrderPeriod>('daily');
+  const [settlementPeriod, setSettlementPeriod] = useState<OrderPeriod>('daily');
   const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [settlementLoading, setSettlementLoading] = useState(false);
+  const [settlementSummary, setSettlementSummary] = useState<{ totalRecords: number; totalClosedAmount: number } | null>(null);
+  const [recentSettlements, setRecentSettlements] = useState<Array<{
+    id: string;
+    amount: number;
+    date: string;
+    packageCount?: number | null;
+    restaurant?: { name?: string } | null;
+    courier?: { name?: string } | null;
+  }>>([]);
+
+  const getDateRangeForPeriod = (period: OrderPeriod) => {
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setHours(23, 59, 59, 999);
+
+    const startDate = new Date(now);
+    startDate.setHours(0, 0, 0, 0);
+
+    if (period === 'weekly') {
+      startDate.setDate(startDate.getDate() - 6);
+    }
+
+    if (period === 'monthly') {
+      startDate.setDate(1);
+    }
+
+    return {
+      startDate: startDate.toISOString().slice(0, 10),
+      endDate: endDate.toISOString().slice(0, 10)
+    };
+  };
 
   const load = useCallback(async () => {
     try {
@@ -59,6 +92,28 @@ export default function AdminStatsScreen({ navigation }: any) {
     loadRecentOrders(orderPeriod);
   }, [loadRecentOrders, orderPeriod]);
 
+  const loadRecentSettlements = useCallback(async (period: OrderPeriod) => {
+    try {
+      setSettlementLoading(true);
+      const range = getDateRangeForPeriod(period);
+      const data = await adminService.getCourierSettlementClosings({
+        ...range,
+        limit: 6
+      });
+      setSettlementSummary(data.summary || { totalRecords: 0, totalClosedAmount: 0 });
+      setRecentSettlements(data.settlements || []);
+    } catch {
+      setSettlementSummary({ totalRecords: 0, totalClosedAmount: 0 });
+      setRecentSettlements([]);
+    } finally {
+      setSettlementLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadRecentSettlements(settlementPeriod);
+  }, [loadRecentSettlements, settlementPeriod]);
+
 
   const tiles: { label: string; key: keyof DashboardStats; color: string; bg: string }[] = [
     { label: 'Toplam Kullanici', key: 'totalUsers', color: '#2563eb', bg: '#eff6ff' },
@@ -73,7 +128,7 @@ export default function AdminStatsScreen({ navigation }: any) {
   return (
     <ScrollView
       style={styles.root}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); loadRecentOrders(orderPeriod); }} />}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); load(); loadRecentOrders(orderPeriod); loadRecentSettlements(settlementPeriod); }} />}
     >
       <AdminHeader title="Admin Dashboard" subtitle="Mobil yonetim paneli" />
 
@@ -155,6 +210,57 @@ export default function AdminStatsScreen({ navigation }: any) {
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.orderAmount}>{order.orderAmount.toFixed(2)} ₺</Text>
                   <Text style={styles.orderStatus}>{order.status}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
+      </View>
+
+      <View style={styles.ordersCard}>
+        <View style={styles.ordersHeader}>
+          <Text style={styles.ordersTitle}>Kurye Hesap Kapama Raporu</Text>
+          <View style={styles.periodRow}>
+            <Pressable style={[styles.periodChip, settlementPeriod === 'daily' && styles.periodChipActive]} onPress={() => setSettlementPeriod('daily')}>
+              <Text style={[styles.periodText, settlementPeriod === 'daily' && styles.periodTextActive]}>Gunluk</Text>
+            </Pressable>
+            <Pressable style={[styles.periodChip, settlementPeriod === 'weekly' && styles.periodChipActive]} onPress={() => setSettlementPeriod('weekly')}>
+              <Text style={[styles.periodText, settlementPeriod === 'weekly' && styles.periodTextActive]}>Haftalik</Text>
+            </Pressable>
+            <Pressable style={[styles.periodChip, settlementPeriod === 'monthly' && styles.periodChipActive]} onPress={() => setSettlementPeriod('monthly')}>
+              <Text style={[styles.periodText, settlementPeriod === 'monthly' && styles.periodTextActive]}>Aylik</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        <View style={styles.grid}>
+          <View style={[styles.tile, { backgroundColor: '#eff6ff' }]}>
+            <Text style={styles.tileLabel}>Kapanan Kayit</Text>
+            <Text style={[styles.tileValue, { color: '#2563eb' }]}>{settlementSummary?.totalRecords || 0}</Text>
+          </View>
+          <View style={[styles.tile, { backgroundColor: '#ecfdf5' }]}>
+            <Text style={styles.tileLabel}>Toplam Kapatilan</Text>
+            <Text style={[styles.tileValue, { color: '#16a34a', fontSize: 24 }]}>{(settlementSummary?.totalClosedAmount || 0).toFixed(2)} ₺</Text>
+          </View>
+        </View>
+
+        {settlementLoading ? (
+          <ActivityIndicator size="small" color="#7c3aed" style={{ marginVertical: 16 }} />
+        ) : recentSettlements.length === 0 ? (
+          <Text style={styles.ordersEmpty}>Secili donemde hesap kapama kaydi yok</Text>
+        ) : (
+          <View style={styles.orderList}>
+            {recentSettlements.map((item) => (
+              <View key={item.id} style={styles.orderItem}>
+                <View>
+                  <Text style={styles.orderNo}>{item.courier?.name || 'Kurye'}</Text>
+                  <Text style={styles.orderMeta}>{item.restaurant?.name || 'Restoran yok'}</Text>
+                  <Text style={styles.orderMeta}>Paket: {item.packageCount ?? '-'}</Text>
+                  <Text style={styles.orderMeta}>{new Date(item.date).toLocaleDateString('tr-TR')} {new Date(item.date).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.orderAmount}>{item.amount.toFixed(2)} ₺</Text>
+                  <Text style={styles.orderStatus}>Kapatildi</Text>
                 </View>
               </View>
             ))}

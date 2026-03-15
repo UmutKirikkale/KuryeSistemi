@@ -18,6 +18,32 @@ interface ExtractedOrderData {
   quality: 'LOW' | 'MEDIUM' | 'HIGH';
   missingFields: string[];
   extractionSource?: 'AI' | 'OCR';
+  recommendedManualReview?: boolean;
+  manualReviewReasons?: string[];
+  debug?: OCRDebugInfo;
+}
+
+interface OCRDebugCandidate {
+  source: 'AI' | 'OCR';
+  variant: string;
+  confidence: number;
+  score: number;
+  quality: 'LOW' | 'MEDIUM' | 'HIGH';
+  missingFields: string[];
+}
+
+interface OCRDebugInfo {
+  aiAttempted: boolean;
+  aiAccepted: boolean;
+  aiRejectedReason?: string;
+  selectedSource: 'AI' | 'OCR';
+  selectedVariant: string;
+  candidates: OCRDebugCandidate[];
+}
+
+interface OCRImageVariant {
+  name: string;
+  input: string | Buffer;
 }
 
 export class OCRService {
@@ -221,9 +247,103 @@ export class OCRService {
     return normalized;
   }
 
-  private async extractByAI(imagePath: string): Promise<Partial<ExtractedOrderData> | null> {
+  private scoreExtractionCandidate(data: Partial<ExtractedOrderData>, confidence: number): number {
+    let score = confidence;
+
+    if (data.customerName) score += 18;
+    if (data.customerPhone && data.customerPhone.length >= 10) score += 18;
+    if (data.deliveryAddress && data.deliveryAddress.length >= 10) score += 22;
+    if (data.orderAmount && data.orderAmount > 0) score += 24;
+    if (data.discountAmount && data.discountAmount >= 0) score += 4;
+    if (data.items && data.items.length > 0) score += Math.min(data.items.length, 3) * 2;
+
+    if (data.customerName && !this.isLikelyCustomerName(data.customerName)) score -= 12;
+    if (data.deliveryAddress && data.deliveryAddress.length < 8) score -= 10;
+    if (data.orderAmount && data.orderAmount > 100000) score -= 20;
+
+    return score;
+  }
+
+  private collectMissingFields(data: Partial<ExtractedOrderData>): string[] {
+    return [
+      { field: 'customerName', exists: Boolean(data.customerName) },
+      { field: 'customerPhone', exists: Boolean(data.customerPhone) },
+      { field: 'deliveryAddress', exists: Boolean(data.deliveryAddress) },
+      { field: 'orderAmount', exists: Boolean(data.orderAmount && data.orderAmount > 0) }
+    ]
+      .filter((item) => !item.exists)
+      .map((item) => item.field);
+  }
+
+  private buildManualReviewReasons(orderData: ExtractedOrderData): string[] {
+    const reasons: string[] = [];
+
+    if (orderData.quality === 'LOW') {
+      reasons.push('low_quality');
+    }
+
+    if (orderData.confidence < 70) {
+      reasons.push('low_confidence');
+    }
+
+    if (orderData.missingFields.includes('deliveryAddress')) {
+      reasons.push('missing_delivery_address');
+    }
+
+    if (orderData.missingFields.includes('orderAmount')) {
+      reasons.push('missing_order_amount');
+    }
+
+    if (!orderData.customerPhone || orderData.customerPhone.length < 10) {
+      reasons.push('missing_or_invalid_phone');
+    }
+
+    if (orderData.deliveryAddress && orderData.deliveryAddress.length < 12) {
+      reasons.push('short_delivery_address');
+    }
+
+    if (orderData.orderAmount && orderData.orderAmount > 5000) {
+      reasons.push('suspicious_high_amount');
+    }
+
+    if (orderData.extractionSource === 'OCR' && orderData.missingFields.length >= 2) {
+      reasons.push('ocr_multiple_missing_fields');
+    }
+
+    return Array.from(new Set(reasons));
+  }
+
+  private finalizeOrderData(orderData: ExtractedOrderData, confidence: number): ExtractedOrderData {
+    orderData.confidence = confidence;
+    orderData.missingFields = this.collectMissingFields(orderData);
+    orderData.quality = this.calculateQuality(confidence, orderData.missingFields.length);
+    orderData.manualReviewReasons = this.buildManualReviewReasons(orderData);
+    orderData.recommendedManualReview = orderData.manualReviewReasons.length > 0;
+
+    return orderData;
+  }
+
+  private evaluateAiCandidate(data: Partial<ExtractedOrderData>): { accepted: boolean; score: number; reason?: string } {
+    const score = this.scoreExtractionCandidate(data, 72);
+
+    if (!data.deliveryAddress) {
+      return { accepted: false, score, reason: 'missing_delivery_address' };
+    }
+
+    if (!data.orderAmount || data.orderAmount <= 0) {
+      return { accepted: false, score, reason: 'missing_order_amount' };
+    }
+
+    if (score < 95) {
+      return { accepted: false, score, reason: 'low_ai_score' };
+    }
+
+    return { accepted: true, score };
+  }
+
+  private async extractByAI(imagePath: string): Promise<{ data: Partial<ExtractedOrderData> | null; candidate?: OCRDebugCandidate; rejectedReason?: string }> {
     if (!this.aiConfig.apiKey) {
-      return null;
+      return { data: null, rejectedReason: 'ai_disabled' };
     }
 
     const imageBuffer = fs.readFileSync(imagePath);
@@ -269,22 +389,35 @@ export class OCRService {
       });
 
       if (!response.ok) {
-        return null;
+        return { data: null, rejectedReason: `ai_http_${response.status}` };
       }
 
       const payload = await response.json();
       const aiText = this.extractAiContent(payload);
       const parsed = this.parseJsonFromText(aiText);
       if (!parsed) {
-        return null;
+        return { data: null, rejectedReason: 'ai_invalid_json' };
       }
 
       const normalized = this.normalizeAiResult(parsed);
-      const hasCoreData = Boolean(normalized.customerName || normalized.deliveryAddress || normalized.orderAmount);
-      return hasCoreData ? normalized : null;
+      const evaluation = this.evaluateAiCandidate(normalized);
+      const candidate: OCRDebugCandidate = {
+        source: 'AI',
+        variant: 'ai-json-extraction',
+        confidence: 72,
+        score: evaluation.score,
+        quality: this.calculateQuality(72, this.collectMissingFields(normalized).length),
+        missingFields: this.collectMissingFields(normalized)
+      };
+
+      if (!evaluation.accepted) {
+        return { data: null, candidate, rejectedReason: evaluation.reason };
+      }
+
+      return { data: normalized, candidate };
     } catch (error) {
       console.warn('AI OCR failed, fallback to Tesseract OCR:', error);
-      return null;
+      return { data: null, rejectedReason: 'ai_request_failed' };
     } finally {
       clearTimeout(timer);
     }
@@ -467,35 +600,77 @@ export class OCRService {
     return 'LOW';
   }
 
-  private async preprocessImage(imagePath: string): Promise<Buffer> {
-    return await sharp(imagePath)
-      .rotate()
-      .resize({ width: 1100, withoutEnlargement: true })
-      .grayscale()
-      .normalize()
-      .sharpen({ sigma: 1.1 })
-      .toBuffer();
+  private async preprocessImageVariants(imagePath: string): Promise<OCRImageVariant[]> {
+    const base = sharp(imagePath).rotate().resize({ width: 1100, withoutEnlargement: true }).grayscale();
+
+    const [normalized, thresholded, sharpened] = await Promise.all([
+      base.clone().normalize().sharpen({ sigma: 1.1 }).toBuffer(),
+      base.clone().normalize().threshold(185).toBuffer(),
+      base.clone().linear(1.15, -8).sharpen({ sigma: 1.5 }).toBuffer()
+    ]);
+
+    return [
+      { name: 'normalized-sharpened', input: normalized },
+      { name: 'thresholded', input: thresholded },
+      { name: 'contrast-sharpened', input: sharpened }
+    ];
   }
 
   /**
    * Görüntüden metin çıkarma (OCR)
    */
-  async extractTextFromImage(imagePath: string): Promise<{ text: string; confidence: number }> {
+  async extractTextFromImage(imagePath: string): Promise<{ text: string; confidence: number; variant: string; candidates: OCRDebugCandidate[] }> {
     try {
-      let imageInput: string | Buffer = imagePath;
+      let imageInputs: OCRImageVariant[] = [{ name: 'original', input: imagePath }];
       try {
-        imageInput = await this.preprocessImage(imagePath);
+        imageInputs = [...(await this.preprocessImageVariants(imagePath)), { name: 'original', input: imagePath }];
       } catch (error) {
         console.warn('OCR pre-processing failed, falling back to original image', error);
       }
 
-      const { data } = await Tesseract.recognize(imageInput, 'tur', {
-        logger: () => undefined
-      });
+      let bestResult: { text: string; confidence: number; score: number; variant: string } | null = null;
+      const candidates: OCRDebugCandidate[] = [];
+
+      for (const imageVariant of imageInputs) {
+        const { data } = await Tesseract.recognize(imageVariant.input, 'tur', {
+          logger: () => undefined
+        });
+
+        const parsed = this.parseOrderFromText(data.text);
+        const score = this.scoreExtractionCandidate(parsed, data.confidence);
+        const missingFields = this.collectMissingFields(parsed);
+        candidates.push({
+          source: 'OCR',
+          variant: imageVariant.name,
+          confidence: data.confidence,
+          score,
+          quality: this.calculateQuality(data.confidence, missingFields.length),
+          missingFields
+        });
+
+        if (!bestResult || score > bestResult.score) {
+          bestResult = {
+            text: data.text,
+            confidence: data.confidence,
+            score,
+            variant: imageVariant.name
+          };
+        }
+
+        if (score >= 135) {
+          break;
+        }
+      }
+
+      if (!bestResult) {
+        throw new Error('OCR candidate evaluation failed');
+      }
 
       return {
-        text: data.text,
-        confidence: data.confidence
+        text: bestResult.text,
+        confidence: bestResult.confidence,
+        variant: bestResult.variant,
+        candidates
       };
     } catch (error) {
       console.error('OCR hatası:', error);
@@ -685,52 +860,52 @@ export class OCRService {
    */
   async processOrderImage(imagePath: string): Promise<ExtractedOrderData> {
     try {
-      const aiData = await this.extractByAI(imagePath);
+      const aiResult = await this.extractByAI(imagePath);
+      const debugCandidates: OCRDebugCandidate[] = aiResult.candidate ? [aiResult.candidate] : [];
 
       let orderData: ExtractedOrderData;
       let confidence = 0;
+      let selectedVariant = 'unknown';
 
-      if (aiData) {
-        confidence = aiData.orderAmount && aiData.deliveryAddress && aiData.customerName ? 90 : 75;
-        orderData = {
+      if (aiResult.data) {
+        confidence = aiResult.data.orderAmount && aiResult.data.deliveryAddress && aiResult.data.customerName ? 90 : 75;
+        orderData = this.finalizeOrderData({
           rawText: '[AI_EXTRACTION]',
-          confidence,
+          confidence: 0,
           items: [],
           quality: 'MEDIUM',
           missingFields: [],
-          customerName: aiData.customerName,
-          customerPhone: aiData.customerPhone,
-          deliveryAddress: aiData.deliveryAddress,
-          pickupAddress: aiData.pickupAddress,
-          orderAmount: aiData.orderAmount,
-          subtotalAmount: aiData.subtotalAmount,
-          discountAmount: aiData.discountAmount,
-          payableAmount: aiData.payableAmount,
-          notes: aiData.notes,
+          customerName: aiResult.data.customerName,
+          customerPhone: aiResult.data.customerPhone,
+          deliveryAddress: aiResult.data.deliveryAddress,
+          pickupAddress: aiResult.data.pickupAddress,
+          orderAmount: aiResult.data.orderAmount,
+          subtotalAmount: aiResult.data.subtotalAmount,
+          discountAmount: aiResult.data.discountAmount,
+          payableAmount: aiResult.data.payableAmount,
+          notes: aiResult.data.notes,
           extractionSource: 'AI'
-        };
+        }, confidence);
+        selectedVariant = 'ai-json-extraction';
       } else {
         // OCR ile metin çıkar
         const extracted = await this.extractTextFromImage(imagePath);
         const textData = this.parseOrderFromText(extracted.text);
-        textData.confidence = extracted.confidence;
         textData.extractionSource = 'OCR';
-        orderData = textData;
+        orderData = this.finalizeOrderData(textData, extracted.confidence);
         confidence = extracted.confidence;
+        selectedVariant = extracted.variant;
+        debugCandidates.push(...extracted.candidates);
       }
 
-      const requiredFieldChecks: Array<{ field: string; exists: boolean }> = [
-        { field: 'customerName', exists: Boolean(orderData.customerName) },
-        { field: 'customerPhone', exists: Boolean(orderData.customerPhone) },
-        { field: 'deliveryAddress', exists: Boolean(orderData.deliveryAddress) },
-        { field: 'orderAmount', exists: Boolean(orderData.orderAmount && orderData.orderAmount > 0) }
-      ];
-
-      orderData.missingFields = requiredFieldChecks
-        .filter((item) => !item.exists)
-        .map((item) => item.field);
-
-      orderData.quality = this.calculateQuality(confidence, orderData.missingFields.length);
+      orderData.debug = {
+        aiAttempted: Boolean(this.aiConfig.apiKey),
+        aiAccepted: Boolean(aiResult.data),
+        aiRejectedReason: aiResult.data ? undefined : aiResult.rejectedReason,
+        selectedSource: orderData.extractionSource || 'OCR',
+        selectedVariant,
+        candidates: debugCandidates.sort((left, right) => right.score - left.score)
+      };
 
       return orderData;
     } catch (error) {

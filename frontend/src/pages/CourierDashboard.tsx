@@ -300,7 +300,7 @@ export default function CourierDashboard() {
                   <p className="text-lg font-semibold text-blue-900">{settlementReport?.totals?.totalRestaurants || 0}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-indigo-50 border border-indigo-100">
-                  <p className="text-xs text-indigo-700">Toplam Paket</p>
+                  <p className="text-xs text-indigo-700">Nakit Paket</p>
                   <p className="text-lg font-semibold text-indigo-900">{settlementReport?.totals?.totalPackages || 0}</p>
                 </div>
                 <div className="p-3 rounded-lg bg-orange-50 border border-orange-100">
@@ -312,6 +312,17 @@ export default function CourierDashboard() {
                   <p className="text-lg font-semibold text-green-900">
                     {(settlementReport?.totals?.totalAmountToRestaurant || 0).toFixed(2)} ₺
                   </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div className="p-3 rounded-lg bg-slate-50 border border-slate-200">
+                  <p className="text-xs text-slate-700">Kart Paket</p>
+                  <p className="text-lg font-semibold text-slate-900">{settlementReport?.totals?.totalCardPackages || 0}</p>
+                </div>
+                <div className="p-3 rounded-lg bg-sky-50 border border-sky-100">
+                  <p className="text-xs text-sky-700">Kart ile Direkt Yatan</p>
+                  <p className="text-lg font-semibold text-sky-900">{(settlementReport?.totals?.totalDirectCardAmount || 0).toFixed(2)} ₺</p>
                 </div>
               </div>
 
@@ -333,23 +344,27 @@ export default function CourierDashboard() {
                     {(settlementReport?.rows || []).map((row: any) => (
                       <tr key={row.restaurantId} className="border-b last:border-0">
                         <td className="py-2 pr-4 font-medium">{row.restaurantName}</td>
-                        <td className="py-2 pr-4">{row.packageCount}</td>
+                        <td className="py-2 pr-4">
+                          <div>{row.settlementPackageCount} nakit</div>
+                          {row.cardPackageCount > 0 && <div className="text-xs text-slate-500">{row.cardPackageCount} kart</div>}
+                        </td>
                         <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.grossAmount.toFixed(2)} ₺</td>
                         <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.commissionAmount.toFixed(2)} ₺</td>
                         <td className={`py-2 pr-4 ${row.isClosed ? 'text-gray-400 line-through' : ''}`}>{row.isClosed ? '0.00' : row.courierFeeAmount.toFixed(2)} ₺</td>
                         <td className={`py-2 pr-4 font-semibold ${row.isClosed ? 'text-gray-400' : ''}`}>{row.isClosed ? '0.00' : row.amountToRestaurant.toFixed(2)} ₺</td>
                         <td className="py-2">
-                          <span className={`px-2 py-1 rounded text-xs ${row.isClosed ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
-                            {row.isClosed ? 'Kapalı' : 'Açık'}
+                          <span className={`px-2 py-1 rounded text-xs ${row.isClosed ? 'bg-green-100 text-green-700' : row.needsSettlement ? 'bg-orange-100 text-orange-700' : 'bg-slate-100 text-slate-600'}`}>
+                            {row.isClosed ? 'Kapalı' : row.needsSettlement ? 'Açık' : 'Kart Ödemesi'}
                           </span>
+                          {row.directCardAmount > 0 && <div className="text-xs text-sky-700 mt-1">Direkt: {row.directCardAmount.toFixed(2)} ₺</div>}
                         </td>
                         <td className="py-2">
                           <button
                             onClick={() => row.isClosed ? handleReopenRestaurantSettlement(row.restaurantId) : handleCloseRestaurantSettlement(row.restaurantId)}
-                            disabled={closingSettlement}
+                            disabled={closingSettlement || (!row.isClosed && !row.needsSettlement)}
                             className={`px-2 py-1 rounded text-xs font-semibold text-white disabled:opacity-50 ${row.isClosed ? 'bg-orange-600' : 'bg-teal-600'}`}
                           >
-                            {row.isClosed ? 'Yeniden Aç' : 'Bu Restoranı Kapat'}
+                            {row.isClosed ? 'Yeniden Aç' : row.needsSettlement ? 'Bu Restoranı Kapat' : 'Kapatılamaz'}
                           </button>
                         </td>
                       </tr>

@@ -221,7 +221,7 @@ interface SystemSettings {
 
 const defaultPlatformCommissionTemplates: SystemSettings['platformCommissionTemplates'] = {
   YEMEKSEPETI: 35,
-  FEEDME: 25,
+  FEEDME: 0,
   GETIRYEMEK: 30,
   TRENDYOLYEMEK: 30,
   DIGER: 20
@@ -307,6 +307,7 @@ export default function AdminDashboard() {
   const [editVehicleType, setEditVehicleType] = useState<string>('');
   const [editIsAvailable, setEditIsAvailable] = useState<boolean>(false);
   const [editSaving, setEditSaving] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const loadCourierLocations = useCallback(async () => {
     try {
@@ -378,6 +379,19 @@ export default function AdminDashboard() {
       alert(message);
     } finally {
       setSettingsSaving(false);
+    }
+  };
+
+  const handleLogout = () => {
+    if (loggingOut) {
+      return;
+    }
+
+    setLoggingOut(true);
+    try {
+      logout();
+    } finally {
+      setLoggingOut(false);
     }
   };
 
@@ -754,10 +768,11 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={logout}
-                className="btn btn-secondary"
+                onClick={handleLogout}
+                className="btn btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={loggingOut}
               >
-                \u00c7\u0131k\u0131\u015f Yap
+                {loggingOut ? 'Çıkış Yapılıyor...' : 'Çıkış Yap'}
               </button>
             </div>
           </div>

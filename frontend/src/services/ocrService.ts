@@ -16,11 +16,31 @@ export interface ExtractedOrderData {
   quality?: 'LOW' | 'MEDIUM' | 'HIGH';
   missingFields?: string[];
   extractionSource?: 'AI' | 'OCR';
+  recommendedManualReview?: boolean;
+  manualReviewReasons?: string[];
+  debug?: {
+    aiAttempted: boolean;
+    aiAccepted: boolean;
+    aiRejectedReason?: string;
+    selectedSource: 'AI' | 'OCR';
+    selectedVariant: string;
+    candidates: Array<{
+      source: 'AI' | 'OCR';
+      variant: string;
+      confidence: number;
+      score: number;
+      quality: 'LOW' | 'MEDIUM' | 'HIGH';
+      missingFields: string[];
+    }>;
+  };
 }
 
 export interface OCRResponse {
   message: string;
   extractionSource?: 'AI' | 'OCR';
+  recommendedManualReview?: boolean;
+  manualReviewReasons?: string[];
+  debug?: ExtractedOrderData['debug'];
   data: ExtractedOrderData;
   suggestions: {
     customerName: string;
@@ -37,6 +57,9 @@ export interface OCRResponse {
     quality?: 'LOW' | 'MEDIUM' | 'HIGH';
     missingFields?: string[];
     extractionSource?: 'AI' | 'OCR';
+    recommendedManualReview?: boolean;
+    manualReviewReasons?: string[];
+    debug?: ExtractedOrderData['debug'];
   };
 }
 

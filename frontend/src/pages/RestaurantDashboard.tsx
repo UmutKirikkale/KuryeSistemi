@@ -461,16 +461,6 @@ export default function RestaurantDashboard() {
               >
                 Finansal Rapor
               </button>
-              <button
-                onClick={() => setActiveTab('menu')}
-                className={`py-4 px-4 font-medium border-b-2 transition-colors ${
-                  activeTab === 'menu'
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Menü Yönetimi
-              </button>
             </div>
           </div>
 

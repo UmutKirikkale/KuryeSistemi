@@ -162,6 +162,16 @@ export default function CourierEarningsScreen() {
                 <Text style={[styles.statValue, { color: '#ea580c' }]}>{settlement?.totals?.openRestaurants || 0}</Text>
               </View>
             </View>
+            <View style={styles.grid}>
+              <View style={[styles.statCard, { backgroundColor: '#eef2ff' }]}>
+                <Text style={styles.statLabel}>Nakit Paket</Text>
+                <Text style={[styles.statValue, { color: '#4f46e5' }]}>{settlement?.totals?.totalPackages || 0}</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: '#f0f9ff' }]}>
+                <Text style={styles.statLabel}>Kart Direkt Yatan</Text>
+                <Text style={[styles.statValue, { color: '#0284c7', fontSize: 18 }]}>{Number(settlement?.totals?.totalDirectCardAmount || 0).toFixed(2)} ₺</Text>
+              </View>
+            </View>
             <Pressable style={[styles.closeButton, closing && styles.closeButtonDisabled]} onPress={handleCloseSettlement} disabled={closing || !(settlement?.totals?.openRestaurants > 0)}>
               <Text style={styles.closeButtonText}>{closing ? 'Kapatiliyor...' : 'Tum Acik Restoranlari Kapat'}</Text>
             </Pressable>
@@ -169,11 +179,13 @@ export default function CourierEarningsScreen() {
               <View key={row.restaurantId} style={styles.settlementRow}>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.rowMain}>{row.restaurantName}</Text>
-                  <Text style={styles.rowSub}>{row.packageCount} paket</Text>
+                  <Text style={styles.rowSub}>{row.settlementPackageCount} nakit paket</Text>
+                  {row.cardPackageCount > 0 && <Text style={styles.rowSub}>{row.cardPackageCount} kart paket - direkt yatti</Text>}
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={[styles.rowAmount, row.isClosed && { color: '#94a3b8', textDecorationLine: 'line-through' }]}>{row.isClosed ? '0.00' : Number(row.amountToRestaurant || 0).toFixed(2)} ₺</Text>
-                  <Text style={styles.rowSub}>{row.isClosed ? 'Kapali' : 'Acik'}</Text>
+                  <Text style={styles.rowSub}>{row.isClosed ? 'Kapali' : row.needsSettlement ? 'Acik' : 'Kart Odemesi'}</Text>
+                  {row.directCardAmount > 0 && <Text style={styles.rowSub}>Direkt: {Number(row.directCardAmount).toFixed(2)} ₺</Text>}
                   <Pressable
                     style={[styles.rowActionBtn, row.isClosed ? styles.rowActionOpen : styles.rowActionClose, closing && styles.closeButtonDisabled]}
                     onPress={() =>
@@ -181,9 +193,9 @@ export default function CourierEarningsScreen() {
                         ? handleReopenRestaurantSettlement(row.restaurantId)
                         : handleCloseRestaurantSettlement(row.restaurantId)
                     }
-                    disabled={closing}
+                    disabled={closing || (!row.isClosed && !row.needsSettlement)}
                   >
-                    <Text style={styles.rowActionText}>{row.isClosed ? 'Yeniden Ac' : 'Bu Restorani Kapat'}</Text>
+                    <Text style={styles.rowActionText}>{row.isClosed ? 'Yeniden Ac' : row.needsSettlement ? 'Bu Restorani Kapat' : 'Kapatilamaz'}</Text>
                   </Pressable>
                 </View>
               </View>

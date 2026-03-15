@@ -10,7 +10,7 @@ type PlatformKey = typeof PLATFORM_KEYS[number];
 
 const defaultPlatformCommissionTemplates: Record<PlatformKey, number> = {
   YEMEKSEPETI: 35,
-  FEEDME: 25,
+  FEEDME: 0,
   GETIRYEMEK: 30,
   TRENDYOLYEMEK: 30,
   DIGER: 20
@@ -1453,10 +1453,14 @@ export const getCourierSettlementClosings = async (req: AuthRequest, res: Respon
     if (startDate || endDate) {
       whereClause.date = {};
       if (startDate) {
-        whereClause.date.gte = new Date(startDate as string);
+        const start = new Date(startDate as string);
+        start.setHours(0, 0, 0, 0);
+        whereClause.date.gte = start;
       }
       if (endDate) {
-        whereClause.date.lte = new Date(endDate as string);
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999);
+        whereClause.date.lte = end;
       }
     }
 

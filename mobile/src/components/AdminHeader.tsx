@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAuthStore } from '../store/authStore';
 
@@ -9,9 +9,19 @@ interface AdminHeaderProps {
 
 export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
   const { logout } = useAuthStore();
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    void logout();
+  const handleLogout = async () => {
+    if (loggingOut) {
+      return;
+    }
+
+    try {
+      setLoggingOut(true);
+      await logout();
+    } finally {
+      setLoggingOut(false);
+    }
   };
 
   return (
@@ -20,8 +30,8 @@ export default function AdminHeader({ title, subtitle }: AdminHeaderProps) {
         <Text style={styles.title}>{title}</Text>
         {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       </View>
-      <Pressable style={styles.logoutButton} onPress={handleLogout} hitSlop={10}>
-        <Text style={styles.logoutText}>Cikis</Text>
+      <Pressable style={[styles.logoutButton, loggingOut && styles.logoutButtonDisabled]} onPress={handleLogout} hitSlop={10} disabled={loggingOut}>
+        <Text style={styles.logoutText}>{loggingOut ? 'Cikiliyor...' : 'Cikis'}</Text>
       </Pressable>
     </View>
   );
@@ -53,6 +63,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10
+  },
+  logoutButtonDisabled: {
+    opacity: 0.6
   },
   logoutText: {
     color: '#fff',
