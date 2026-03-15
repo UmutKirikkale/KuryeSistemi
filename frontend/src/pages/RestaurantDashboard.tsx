@@ -67,6 +67,7 @@ export default function RestaurantDashboard() {
   const [showLocationModal, setShowLocationModal] = useState(false);
   const [showAllOrdersModal, setShowAllOrdersModal] = useState(false);
   const [restaurantLocation, setRestaurantLocation] = useState<[number, number]>([35.1264, 33.4299]);
+  const [restaurantAddress, setRestaurantAddress] = useState<string>('');
   const [tempLocation, setTempLocation] = useState<[number, number]>([35.1264, 33.4299]);
   const [financialData, setFinancialData] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'orders' | 'map' | 'financial' | 'menu'>('orders');
@@ -133,6 +134,9 @@ export default function RestaurantDashboard() {
         const location: [number, number] = [response.restaurant.latitude, response.restaurant.longitude];
         setRestaurantLocation(location);
         setTempLocation(location);
+      }
+      if (response.restaurant.address) {
+        setRestaurantAddress(response.restaurant.address);
       }
     } catch (error) {
       console.error('Failed to load restaurant profile:', error);
@@ -724,6 +728,9 @@ export default function RestaurantDashboard() {
             fetchOrders();
             loadFinancialData();
           }}
+          restaurantAddress={restaurantAddress}
+          restaurantLat={restaurantLocation[0]}
+          restaurantLon={restaurantLocation[1]}
         />
       )}
 

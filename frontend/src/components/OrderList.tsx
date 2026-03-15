@@ -294,7 +294,7 @@ export default function OrderList({ orders, role }: OrderListProps) {
               )}
 
               {role === 'RESTAURANT' && order.status === 'PENDING' && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" style={{ display: 'none' }}>
                   <button
                     onClick={() => handleStatusUpdate(order.id, 'APPROVED')}
                     className="btn btn-primary btn-sm"
@@ -311,7 +311,7 @@ export default function OrderList({ orders, role }: OrderListProps) {
               )}
 
               {role === 'RESTAURANT' && order.status === 'APPROVED' && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" style={{ display: 'none' }}>
                   <button
                     onClick={() => handleStatusUpdate(order.id, 'PREPARING')}
                     className="btn btn-primary btn-sm"
@@ -328,7 +328,7 @@ export default function OrderList({ orders, role }: OrderListProps) {
               )}
 
               {role === 'RESTAURANT' && ['PREPARING', 'ASSIGNED'].includes(order.status) && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" style={{ display: 'none' }}>
                   <button
                     onClick={() => handleStatusUpdate(order.id, 'PICKED_UP')}
                     className="btn btn-primary btn-sm"
@@ -345,7 +345,7 @@ export default function OrderList({ orders, role }: OrderListProps) {
               )}
 
               {role === 'RESTAURANT' && order.status === 'PICKED_UP' && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2" style={{ display: 'none' }}>
                   <label htmlFor={`paymentMethod-rest-${order.id}`} className="sr-only">
                     Ödeme Tipi
                   </label>

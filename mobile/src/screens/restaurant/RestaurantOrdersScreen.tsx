@@ -135,28 +135,7 @@ export default function RestaurantOrdersScreen() {
         )}
 
         <View style={styles.actions}>
-          {next && (
-            <Pressable
-              style={[styles.btn, styles.btnPrimary]}
-              onPress={() => doStatus(item.id, next.value)}
-              disabled={isActioning}
-            >
-              {isActioning ? (
-                <ActivityIndicator color="#fff" size="small" />
-              ) : (
-                <Text style={styles.btnText}>{next.label}</Text>
-              )}
-            </Pressable>
-          )}
-          {canCancel && (
-            <Pressable
-              style={[styles.btn, styles.btnDanger]}
-              onPress={() => handleCancel(item.id)}
-              disabled={isActioning}
-            >
-              <Text style={styles.btnText}>Iptal</Text>
-            </Pressable>
-          )}
+          {/* Durum butonlari gecici olarak gizlendi */}
         </View>
       </View>
     );

@@ -5,17 +5,20 @@ import { X } from 'lucide-react';
 interface CreateOrderModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  restaurantAddress?: string;
+  restaurantLat?: number;
+  restaurantLon?: number;
 }
 
-export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModalProps) {
+export default function CreateOrderModal({ onClose, onSuccess, restaurantAddress = '', restaurantLat = 35.1264, restaurantLon = 33.4299 }: CreateOrderModalProps) {
   const { createOrder, isLoading } = useOrderStore();
   const [formData, setFormData] = useState({
-    pickupAddress: '',
+    pickupAddress: restaurantAddress,
     deliveryAddress: '',
-    pickupLatitude: 35.1264,
-    pickupLongitude: 33.4299,
-    deliveryLatitude: 35.1364,
-    deliveryLongitude: 33.4399,
+    pickupLatitude: restaurantLat,
+    pickupLongitude: restaurantLon,
+    deliveryLatitude: restaurantLat,
+    deliveryLongitude: restaurantLon,
     orderAmount: '',
     customerName: '',
     customerPhone: '',
@@ -90,47 +93,14 @@ export default function CreateOrderModal({ onClose, onSuccess }: CreateOrderModa
           <div>
             <h3 className="font-semibold text-lg mb-3">Alış Bilgileri</h3>
             <div>
-              <label htmlFor="pickupAddress" className="label">Alış Adresi</label>
+              <label htmlFor="pickupAddress" className="label">Alış Adresi (Restoran)</label>
               <input
                 id="pickupAddress"
                 type="text"
-                className="input"
+                className="input bg-gray-50 text-gray-500 cursor-not-allowed"
                 value={formData.pickupAddress}
-                onChange={(e) =>
-                  setFormData({ ...formData, pickupAddress: e.target.value })
-                }
-                required
+                readOnly
               />
-            </div>
-            <div className="grid grid-cols-2 gap-4 mt-2">
-              <div>
-                <label htmlFor="pickupLatitude" className="label">Enlem</label>
-                <input
-                  id="pickupLatitude"
-                  type="number"
-                  step="any"
-                  className="input"
-                  value={formData.pickupLatitude}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pickupLatitude: parseFloat(e.target.value) })
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="pickupLongitude" className="label">Boylam</label>
-                <input
-                  id="pickupLongitude"
-                  type="number"
-                  step="any"
-                  className="input"
-                  value={formData.pickupLongitude}
-                  onChange={(e) =>
-                    setFormData({ ...formData, pickupLongitude: parseFloat(e. target.value) })
-                  }
-                  required
-                />
-              </div>
             </div>
           </div>
 
