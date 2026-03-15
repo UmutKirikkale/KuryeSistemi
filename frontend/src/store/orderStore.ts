@@ -13,6 +13,9 @@ interface Order {
   customerName: string;
   customerPhone: string;
   paymentMethod?: 'CASH' | 'CARD';
+  sourcePlatform?: string;
+  externalOrderId?: string;
+  notes?: string;
   restaurant?: any;
   courier?: any;
   createdAt: string;
