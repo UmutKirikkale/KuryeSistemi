@@ -5,7 +5,8 @@ import {
   getDailyReport,
   getMonthlyReport,
   getCourierDailySettlement,
-  closeCourierDailySettlement
+  closeCourierDailySettlement,
+  reopenCourierDailySettlement
 } from '../controllers/financial.controller';
 import { authenticate, authorize } from '../middleware/auth';
 
@@ -31,5 +32,8 @@ router.get('/courier/settlement', authorize('COURIER', 'ADMIN'), getCourierDaily
 
 // Kurye günlük hesap kapama
 router.post('/courier/settlement/close', authorize('COURIER', 'ADMIN'), closeCourierDailySettlement);
+
+// Kurye günlük hesap yeniden açma (restoran bazlı)
+router.post('/courier/settlement/reopen', authorize('COURIER', 'ADMIN'), reopenCourierDailySettlement);
 
 export default router;

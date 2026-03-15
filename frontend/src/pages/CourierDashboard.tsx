@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuthStore } from '../store/authStore';
 import { useOrderStore } from '../store/orderStore';
 import { useLocationStore } from '../store/locationStore';
@@ -25,6 +25,9 @@ export default function CourierDashboard() {
   const [settlementLoading, setSettlementLoading] = useState(false);
   const [closingSettlement, setClosingSettlement] = useState(false);
   const [orderPeriod, setOrderPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
+  const [orderQuery, setOrderQuery] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
+  const [orderPlatformFilter, setOrderPlatformFilter] = useState('ALL');
   const [settlementDate, setSettlementDate] = useState<string>(
     new Date().toISOString().slice(0, 10)
   );
@@ -100,6 +103,34 @@ export default function CourierDashboard() {
     }
   };
 
+  const handleCloseRestaurantSettlement = async (restaurantId: string) => {
+    try {
+      setClosingSettlement(true);
+      const response = await financialService.closeCourierSettlementForRestaurant(restaurantId, settlementDate);
+      setSettlementReport(response.report);
+      alert(response.message || 'Restoran hesabi kapatildi');
+    } catch (error) {
+      console.error('Failed to close restaurant settlement:', error);
+      alert('Restoran hesap kapama başarısız oldu');
+    } finally {
+      setClosingSettlement(false);
+    }
+  };
+
+  const handleReopenRestaurantSettlement = async (restaurantId: string) => {
+    try {
+      setClosingSettlement(true);
+      const response = await financialService.reopenCourierSettlementForRestaurant(restaurantId, settlementDate);
+      setSettlementReport(response.report);
+      alert(response.message || 'Restoran hesabi yeniden acildi');
+    } catch (error) {
+      console.error('Failed to reopen restaurant settlement:', error);
+      alert('Restoran hesap açma başarısız oldu');
+    } finally {
+      setClosingSettlement(false);
+    }
+  };
+
   const handleToggleAvailability = async () => {
     try {
       const response = await locationService.toggleAvailability();
@@ -117,6 +148,25 @@ export default function CourierDashboard() {
   const myOrders = orders.filter(
     (order) => order.courier?.id === user?.id || ['PENDING', 'APPROVED', 'PREPARING'].includes(order.status)
   );
+
+  const filteredMyOrders = useMemo(() => {
+    const normalizedQuery = orderQuery.trim().toLowerCase();
+
+    return myOrders.filter((order) => {
+      const statusOk = orderStatusFilter === 'ALL' || order.status === orderStatusFilter;
+      const platformOk = orderPlatformFilter === 'ALL' || (order.sourcePlatform || '') === orderPlatformFilter;
+      if (!statusOk || !platformOk) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = `${order.orderNumber} ${order.customerName} ${order.deliveryAddress} ${order.sourcePlatform || ''}`.toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [myOrders, orderPlatformFilter, orderQuery, orderStatusFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -230,7 +280,7 @@ export default function CourierDashboard() {
                 disabled={closingSettlement || settlementLoading || !settlementReport?.totals?.openRestaurants}
                 className="btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {closingSettlement ? 'Kapatılıyor...' : 'Gün Sonu Hesap Kapat'}
+                {closingSettlement ? 'Kapatılıyor...' : 'Tüm Açık Restoranları Kapat'}
               </button>
             </div>
           </div>
@@ -271,6 +321,7 @@ export default function CourierDashboard() {
                       <th className="py-2 pr-4">Kurye Ücreti</th>
                       <th className="py-2 pr-4">Ödenecek</th>
                       <th className="py-2">Durum</th>
+                      <th className="py-2">İşlem</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -287,11 +338,20 @@ export default function CourierDashboard() {
                             {row.isClosed ? 'Kapalı' : 'Açık'}
                           </span>
                         </td>
+                        <td className="py-2">
+                          <button
+                            onClick={() => row.isClosed ? handleReopenRestaurantSettlement(row.restaurantId) : handleCloseRestaurantSettlement(row.restaurantId)}
+                            disabled={closingSettlement}
+                            className={`px-2 py-1 rounded text-xs font-semibold text-white disabled:opacity-50 ${row.isClosed ? 'bg-orange-600' : 'bg-teal-600'}`}
+                          >
+                            {row.isClosed ? 'Yeniden Aç' : 'Bu Restoranı Kapat'}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                     {!settlementReport?.rows?.length && (
                       <tr>
-                        <td colSpan={7} className="py-6 text-center text-gray-500">
+                        <td colSpan={8} className="py-6 text-center text-gray-500">
                           Bu tarih için hesap kapama verisi bulunamadı.
                         </td>
                       </tr>
@@ -334,7 +394,43 @@ export default function CourierDashboard() {
               </button>
             </div>
           </div>
-          <OrderList orders={myOrders} role="COURIER" />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+            <input
+              type="text"
+              value={orderQuery}
+              onChange={(event) => setOrderQuery(event.target.value)}
+              placeholder="Sipariş no, müşteri, adres ara"
+              className="input"
+            />
+            <select
+              title="Durum filtresi"
+              value={orderStatusFilter}
+              onChange={(event) => setOrderStatusFilter(event.target.value)}
+              className="input"
+            >
+              <option value="ALL">Tüm Durumlar</option>
+              <option value="PENDING">Bekliyor</option>
+              <option value="APPROVED">Onaylandı</option>
+              <option value="PREPARING">Hazırlanıyor</option>
+              <option value="ASSIGNED">Atandı</option>
+              <option value="PICKED_UP">Yolda</option>
+              <option value="DELIVERED">Teslim Edildi</option>
+              <option value="CANCELLED">İptal</option>
+            </select>
+            <select
+              title="Platform filtresi"
+              value={orderPlatformFilter}
+              onChange={(event) => setOrderPlatformFilter(event.target.value)}
+              className="input"
+            >
+              <option value="ALL">Tüm Platformlar</option>
+              <option value="FEEDME">Feedme</option>
+              <option value="YEMEKSEPETI">Yemeksepeti</option>
+            </select>
+          </div>
+
+          <OrderList orders={filteredMyOrders} role="COURIER" />
         </div>
       </div>
     </div>

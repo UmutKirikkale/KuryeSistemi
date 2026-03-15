@@ -29,5 +29,21 @@ export const financialService = {
   closeCourierSettlement: async (date?: string) => {
     const response = await api.post('/financial/courier/settlement/close', { date });
     return response.data;
+  },
+
+  closeCourierSettlementForRestaurant: async (restaurantId: string, date?: string) => {
+    const response = await api.post('/financial/courier/settlement/close', {
+      date,
+      restaurantId
+    });
+    return response.data;
+  },
+
+  reopenCourierSettlementForRestaurant: async (restaurantId: string, date?: string) => {
+    const response = await api.post('/financial/courier/settlement/reopen', {
+      date,
+      restaurantId
+    });
+    return response.data;
   }
 };

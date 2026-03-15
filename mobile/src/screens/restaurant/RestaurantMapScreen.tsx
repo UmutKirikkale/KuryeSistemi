@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +30,23 @@ export default function RestaurantMapScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
+
+  const markerCoordinate = useMemo(() => {
+    const lat = Number(latitude);
+    const lng = Number(longitude);
+
+    if (Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+      return { latitude: lat, longitude: lng };
+    }
+
+    const profileLat = Number(profile?.latitude);
+    const profileLng = Number(profile?.longitude);
+    if (Number.isFinite(profileLat) && Number.isFinite(profileLng) && Math.abs(profileLat) <= 90 && Math.abs(profileLng) <= 180) {
+      return { latitude: profileLat, longitude: profileLng };
+    }
+
+    return null;
+  }, [latitude, longitude, profile?.latitude, profile?.longitude]);
 
   const getInitialRegion = (): Region => {
     const lat = Number(latitude);
@@ -117,22 +134,46 @@ export default function RestaurantMapScreen() {
               showsCompass
               showsTraffic={false}
               onPress={(event) => {
-                const { latitude: nextLat, longitude: nextLng } = event.nativeEvent.coordinate;
-                setLatitude(String(nextLat.toFixed(6)));
-                setLongitude(String(nextLng.toFixed(6)));
+                const coordinate = event?.nativeEvent?.coordinate;
+                const nextLat = Number(coordinate?.latitude);
+                const nextLng = Number(coordinate?.longitude);
+
+                if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
+                  return;
+                }
+
+                setLatitude(nextLat.toFixed(6));
+                setLongitude(nextLng.toFixed(6));
+                setProfile((prev: any) => ({
+                  ...(prev || {}),
+                  latitude: nextLat,
+                  longitude: nextLng
+                }));
               }}
             >
-              {profile?.latitude != null && profile?.longitude != null && (
+              {markerCoordinate && (
                 <Marker
-                  coordinate={{ latitude: Number(profile.latitude), longitude: Number(profile.longitude) }}
+                  coordinate={markerCoordinate}
                   title={profile?.name || 'Restoran'}
                   description={profile?.address || 'Restoran konumu'}
                   pinColor="#dc2626"
                   draggable
                   onDragEnd={(event) => {
-                    const { latitude: nextLat, longitude: nextLng } = event.nativeEvent.coordinate;
-                    setLatitude(String(nextLat.toFixed(6)));
-                    setLongitude(String(nextLng.toFixed(6)));
+                    const coordinate = event?.nativeEvent?.coordinate;
+                    const nextLat = Number(coordinate?.latitude);
+                    const nextLng = Number(coordinate?.longitude);
+
+                    if (!Number.isFinite(nextLat) || !Number.isFinite(nextLng)) {
+                      return;
+                    }
+
+                    setLatitude(nextLat.toFixed(6));
+                    setLongitude(nextLng.toFixed(6));
+                    setProfile((prev: any) => ({
+                      ...(prev || {}),
+                      latitude: nextLat,
+                      longitude: nextLng
+                    }));
                   }}
                 />
               )}

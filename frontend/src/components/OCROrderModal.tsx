@@ -17,6 +17,7 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedOrderData | null>(null);
   const [step, setStep] = useState<'upload' | 'processing' | 'review'>('upload');
+  const [extractionSource, setExtractionSource] = useState<'AI' | 'OCR' | null>(null);
   const [lowQualityDetected, setLowQualityDetected] = useState(false);
   const [allowLowQualityProceed, setAllowLowQualityProceed] = useState(false);
   const [invoiceSummary, setInvoiceSummary] = useState({
@@ -65,6 +66,7 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
     setPreviewUrl('');
     setLowQualityDetected(false);
     setAllowLowQualityProceed(false);
+    setExtractionSource(null);
     setInvoiceSummary({ discount: '', payable: '' });
   };
 
@@ -86,6 +88,12 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
     try {
       const response = await ocrService.extractOrderFromImage(selectedFile);
       setExtractedData(response.data);
+      setExtractionSource(
+        response.suggestions.extractionSource ||
+        response.extractionSource ||
+        response.data.extractionSource ||
+        null
+      );
       
       // Form verilerini OCR sonuçlarıyla doldur
       setFormData(prev => ({
@@ -312,6 +320,14 @@ export default function OCROrderModal({ onClose, onSuccess }: OCROrderModalProps
                     Doğruluk oranı: <span className="font-semibold">{extractedData.confidence.toFixed(0)}%</span>
                   </p>
                 </div>
+
+                {extractionSource && (
+                  <div className="mt-2">
+                    <span className="inline-flex items-center px-2 py-1 rounded-md border text-xs font-medium bg-indigo-100 text-indigo-700 border-indigo-200">
+                      Kaynak: {extractionSource === 'AI' ? 'AI API' : 'OCR Fallback'}
+                    </span>
+                  </div>
+                )}
 
                 {extractedData.quality && (
                   <div className="mt-3">

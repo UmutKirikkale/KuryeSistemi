@@ -17,6 +17,7 @@ interface ExtractedOrderData {
   confidence: number;
   quality: 'LOW' | 'MEDIUM' | 'HIGH';
   missingFields: string[];
+  extractionSource?: 'AI' | 'OCR';
 }
 
 export class OCRService {
@@ -36,6 +37,13 @@ export class OCRService {
     'odeme',
     'ödeme'
   ];
+
+  private readonly aiConfig = {
+    apiUrl: process.env.AI_OCR_API_URL || process.env.OPENROUTER_API_URL || 'https://openrouter.ai/api/v1/chat/completions',
+    apiKey: process.env.AI_OCR_API_KEY || process.env.OPENROUTER_API_KEY || '',
+    model: process.env.AI_OCR_MODEL || 'google/gemini-2.0-flash-exp:free',
+    timeoutMs: Number(process.env.AI_OCR_TIMEOUT_MS || 25000)
+  };
 
   private normalizeText(text: string): string {
     return text
@@ -114,6 +122,172 @@ export class OCRService {
     }
 
     return parseFloat(cleaned);
+  }
+
+  private getImageMimeType(imagePath: string): string {
+    const lower = imagePath.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.gif')) return 'image/gif';
+    return 'image/jpeg';
+  }
+
+  private parseJsonFromText(raw: string): Record<string, unknown> | null {
+    if (!raw) return null;
+
+    const cleaned = raw
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      const start = cleaned.indexOf('{');
+      const end = cleaned.lastIndexOf('}');
+      if (start !== -1 && end !== -1 && end > start) {
+        try {
+          return JSON.parse(cleaned.slice(start, end + 1));
+        } catch {
+          return null;
+        }
+      }
+      return null;
+    }
+  }
+
+  private extractAiContent(payload: any): string {
+    const content = payload?.choices?.[0]?.message?.content;
+    if (typeof content === 'string') {
+      return content;
+    }
+
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+        .join('\n');
+    }
+
+    return '';
+  }
+
+  private normalizeAiResult(raw: Record<string, unknown>): Partial<ExtractedOrderData> {
+    const customerNameRaw = typeof raw.customerName === 'string' ? raw.customerName : '';
+    const customerPhoneRaw = typeof raw.customerPhone === 'string' ? raw.customerPhone : '';
+    const deliveryAddressRaw = typeof raw.deliveryAddress === 'string' ? raw.deliveryAddress : '';
+    const pickupAddressRaw = typeof raw.pickupAddress === 'string' ? raw.pickupAddress : '';
+    const notesRaw = typeof raw.notes === 'string' ? raw.notes : '';
+
+    const orderAmountRaw =
+      typeof raw.payableAmount === 'number'
+        ? raw.payableAmount
+        : typeof raw.orderAmount === 'number'
+        ? raw.orderAmount
+        : typeof raw.orderAmount === 'string'
+        ? this.parseAmount(raw.orderAmount)
+        : 0;
+
+    const discountAmountRaw =
+      typeof raw.discountAmount === 'number'
+        ? raw.discountAmount
+        : typeof raw.discountAmount === 'string'
+        ? this.parseAmount(raw.discountAmount)
+        : undefined;
+
+    const payableAmountRaw =
+      typeof raw.payableAmount === 'number'
+        ? raw.payableAmount
+        : typeof raw.payableAmount === 'string'
+        ? this.parseAmount(raw.payableAmount)
+        : orderAmountRaw;
+
+    const normalized: Partial<ExtractedOrderData> = {
+      customerName: this.sanitizeCustomerName(customerNameRaw) || undefined,
+      customerPhone: customerPhoneRaw ? this.normalizePhone(customerPhoneRaw) : undefined,
+      deliveryAddress: this.sanitizeDeliveryAddress(deliveryAddressRaw) || undefined,
+      pickupAddress: pickupAddressRaw?.trim() || undefined,
+      orderAmount: Number.isFinite(orderAmountRaw) && orderAmountRaw > 0 ? orderAmountRaw : undefined,
+      discountAmount: discountAmountRaw && Number.isFinite(discountAmountRaw) ? discountAmountRaw : undefined,
+      payableAmount: Number.isFinite(payableAmountRaw) && payableAmountRaw > 0 ? payableAmountRaw : undefined,
+      notes: notesRaw?.trim() || undefined,
+      extractionSource: 'AI'
+    };
+
+    if (!normalized.orderAmount && normalized.payableAmount) {
+      normalized.orderAmount = normalized.payableAmount;
+    }
+
+    return normalized;
+  }
+
+  private async extractByAI(imagePath: string): Promise<Partial<ExtractedOrderData> | null> {
+    if (!this.aiConfig.apiKey) {
+      return null;
+    }
+
+    const imageBuffer = fs.readFileSync(imagePath);
+    const imageBase64 = imageBuffer.toString('base64');
+    const mimeType = this.getImageMimeType(imagePath);
+    const imageDataUrl = `data:${mimeType};base64,${imageBase64}`;
+
+    const prompt = [
+      'Bu bir yemek siparisi fisi veya ekran goruntusu.',
+      'Asagidaki alanlari sadece JSON olarak dondur:',
+      '{"customerName":"","customerPhone":"","deliveryAddress":"","pickupAddress":"","orderAmount":0,"discountAmount":0,"payableAmount":0,"notes":""}',
+      'Kurallar:',
+      '- Sadece JSON ver, ekstra metin verme.',
+      '- Teslimat adresinden telefon/saat bilgisini cikar.',
+      '- customerName adres veya telefon olmasin.',
+      '- Tutar alaninda odenecek tutari kullan.'
+    ].join('\n');
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.aiConfig.timeoutMs);
+
+    try {
+      const response = await fetch(this.aiConfig.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.aiConfig.apiKey}`
+        },
+        body: JSON.stringify({
+          model: this.aiConfig.model,
+          temperature: 0,
+          messages: [
+            {
+              role: 'user',
+              content: [
+                { type: 'text', text: prompt },
+                { type: 'image_url', image_url: { url: imageDataUrl } }
+              ]
+            }
+          ]
+        }),
+        signal: controller.signal
+      });
+
+      if (!response.ok) {
+        return null;
+      }
+
+      const payload = await response.json();
+      const aiText = this.extractAiContent(payload);
+      const parsed = this.parseJsonFromText(aiText);
+      if (!parsed) {
+        return null;
+      }
+
+      const normalized = this.normalizeAiResult(parsed);
+      const hasCoreData = Boolean(normalized.customerName || normalized.deliveryAddress || normalized.orderAmount);
+      return hasCoreData ? normalized : null;
+    } catch (error) {
+      console.warn('AI OCR failed, fallback to Tesseract OCR:', error);
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   private hasPhone(value: string): boolean {
@@ -511,12 +685,39 @@ export class OCRService {
    */
   async processOrderImage(imagePath: string): Promise<ExtractedOrderData> {
     try {
-      // OCR ile metin çıkar
-      const { text, confidence } = await this.extractTextFromImage(imagePath);
+      const aiData = await this.extractByAI(imagePath);
 
-      // Metni parse et
-      const orderData = this.parseOrderFromText(text);
-      orderData.confidence = confidence;
+      let orderData: ExtractedOrderData;
+      let confidence = 0;
+
+      if (aiData) {
+        confidence = aiData.orderAmount && aiData.deliveryAddress && aiData.customerName ? 90 : 75;
+        orderData = {
+          rawText: '[AI_EXTRACTION]',
+          confidence,
+          items: [],
+          quality: 'MEDIUM',
+          missingFields: [],
+          customerName: aiData.customerName,
+          customerPhone: aiData.customerPhone,
+          deliveryAddress: aiData.deliveryAddress,
+          pickupAddress: aiData.pickupAddress,
+          orderAmount: aiData.orderAmount,
+          subtotalAmount: aiData.subtotalAmount,
+          discountAmount: aiData.discountAmount,
+          payableAmount: aiData.payableAmount,
+          notes: aiData.notes,
+          extractionSource: 'AI'
+        };
+      } else {
+        // OCR ile metin çıkar
+        const extracted = await this.extractTextFromImage(imagePath);
+        const textData = this.parseOrderFromText(extracted.text);
+        textData.confidence = extracted.confidence;
+        textData.extractionSource = 'OCR';
+        orderData = textData;
+        confidence = extracted.confidence;
+      }
 
       const requiredFieldChecks: Array<{ field: string; exists: boolean }> = [
         { field: 'customerName', exists: Boolean(orderData.customerName) },

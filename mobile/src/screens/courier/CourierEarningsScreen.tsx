@@ -44,6 +44,32 @@ export default function CourierEarningsScreen() {
     }
   };
 
+  const handleCloseRestaurantSettlement = async (restaurantId: string) => {
+    try {
+      setClosing(true);
+      const response = await financialService.closeCourierSettlementForRestaurant(restaurantId, settlementDate);
+      setSettlement(response.report);
+      Alert.alert('Basarili', response.message || 'Restoran hesabi kapatildi');
+    } catch {
+      Alert.alert('Hata', 'Restoran hesabi kapatma basarisiz oldu');
+    } finally {
+      setClosing(false);
+    }
+  };
+
+  const handleReopenRestaurantSettlement = async (restaurantId: string) => {
+    try {
+      setClosing(true);
+      const response = await financialService.reopenCourierSettlementForRestaurant(restaurantId, settlementDate);
+      setSettlement(response.report);
+      Alert.alert('Basarili', response.message || 'Restoran hesabi yeniden acildi');
+    } catch {
+      Alert.alert('Hata', 'Restoran hesabi acma basarisiz oldu');
+    } finally {
+      setClosing(false);
+    }
+  };
+
   const visibleDeliveries = useMemo(() => {
     if (!data?.orders) return [];
     const normalizedQuery = deliveryQuery.trim().toLowerCase();
@@ -137,7 +163,7 @@ export default function CourierEarningsScreen() {
               </View>
             </View>
             <Pressable style={[styles.closeButton, closing && styles.closeButtonDisabled]} onPress={handleCloseSettlement} disabled={closing || !(settlement?.totals?.openRestaurants > 0)}>
-              <Text style={styles.closeButtonText}>{closing ? 'Kapatiliyor...' : 'Gun Sonu Hesap Kapat'}</Text>
+              <Text style={styles.closeButtonText}>{closing ? 'Kapatiliyor...' : 'Tum Acik Restoranlari Kapat'}</Text>
             </Pressable>
             {(settlement?.rows || []).map((row: any) => (
               <View key={row.restaurantId} style={styles.settlementRow}>
@@ -148,6 +174,17 @@ export default function CourierEarningsScreen() {
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={styles.rowAmount}>{Number(row.amountToRestaurant || 0).toFixed(2)} ₺</Text>
                   <Text style={styles.rowSub}>{row.isClosed ? 'Kapali' : 'Acik'}</Text>
+                  <Pressable
+                    style={[styles.rowActionBtn, row.isClosed ? styles.rowActionOpen : styles.rowActionClose, closing && styles.closeButtonDisabled]}
+                    onPress={() =>
+                      row.isClosed
+                        ? handleReopenRestaurantSettlement(row.restaurantId)
+                        : handleCloseRestaurantSettlement(row.restaurantId)
+                    }
+                    disabled={closing}
+                  >
+                    <Text style={styles.rowActionText}>{row.isClosed ? 'Yeniden Ac' : 'Bu Restorani Kapat'}</Text>
+                  </Pressable>
                 </View>
               </View>
             ))}
@@ -178,6 +215,10 @@ const styles = StyleSheet.create({
   closeButton: { backgroundColor: '#0f766e', borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginBottom: 12 },
   closeButtonDisabled: { opacity: 0.5 },
   closeButtonText: { color: '#fff', fontWeight: '700' },
+  rowActionBtn: { marginTop: 6, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 },
+  rowActionClose: { backgroundColor: '#0f766e' },
+  rowActionOpen: { backgroundColor: '#d97706' },
+  rowActionText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   settlementRow: { backgroundColor: '#fff', borderRadius: 10, padding: 12, marginBottom: 8, flexDirection: 'row', alignItems: 'center' },
   empty: { textAlign: 'center', color: '#94a3b8', marginTop: 40 }
 });

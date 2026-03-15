@@ -30,6 +30,7 @@ export const extractOrderFromImage = async (req: AuthRequest, res: Response): Pr
 
     res.json({
       message: 'Order data extracted successfully',
+      extractionSource: extractedData.extractionSource || 'OCR',
       data: extractedData,
       suggestions: {
         customerName: extractedData.customerName || '',
@@ -43,7 +44,8 @@ export const extractOrderFromImage = async (req: AuthRequest, res: Response): Pr
         notes: extractedData.notes || '',
         confidence: extractedData.confidence,
         quality: extractedData.quality,
-        missingFields: extractedData.missingFields || []
+        missingFields: extractedData.missingFields || [],
+        extractionSource: extractedData.extractionSource || 'OCR'
       }
     });
   } catch (error: unknown) {

@@ -505,10 +505,15 @@ export const closeCourierDailySettlement = async (req: AuthRequest, res: Respons
       throw new AppError('Access denied', 403);
     }
 
-    const { date } = req.body || {};
+    const { date, restaurantId } = req.body || {};
     const report = await getCourierDailySettlementSummary(req.userId!, date);
 
-    const openRows = report.rows.filter((row) => !row.isClosed && row.amountToRestaurant > 0);
+    const openRows = report.rows.filter((row) => {
+      if (restaurantId && row.restaurantId !== restaurantId) {
+        return false;
+      }
+      return !row.isClosed && row.amountToRestaurant > 0;
+    });
 
     if (openRows.length === 0) {
       return res.json({
@@ -536,9 +541,48 @@ export const closeCourierDailySettlement = async (req: AuthRequest, res: Respons
     const refreshedReport = await getCourierDailySettlementSummary(req.userId!, report.dayKey);
 
     return res.json({
-      message: 'Günlük hesap kapama tamamlandı',
+      message: restaurantId ? 'Restoran hesap kapama tamamlandı' : 'Günlük hesap kapama tamamlandı',
       closedCount: createdTransactions.length,
       totalClosedAmount: createdTransactions.reduce((sum, tx) => sum + tx.amount, 0),
+      report: refreshedReport
+    });
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const reopenCourierDailySettlement = async (req: AuthRequest, res: Response): Promise<any> => {
+  try {
+    if (req.userRole !== 'COURIER' && req.userRole !== 'ADMIN') {
+      throw new AppError('Access denied', 403);
+    }
+
+    const { date, restaurantId } = req.body || {};
+    if (!restaurantId) {
+      throw new AppError('restaurantId is required', 400);
+    }
+
+    const { dayKey, startOfDay, endOfDay } = getDayBounds(date);
+
+    const reopenedCount = await prisma.financialTransaction.deleteMany({
+      where: {
+        transactionType: 'COURIER_SETTLEMENT',
+        restaurantId,
+        date: {
+          gte: startOfDay,
+          lte: endOfDay
+        },
+        description: {
+          contains: `courier:${req.userId}|date:${dayKey}|restaurant:${restaurantId}|`
+        }
+      }
+    });
+
+    const refreshedReport = await getCourierDailySettlementSummary(req.userId!, dayKey);
+
+    return res.json({
+      message: reopenedCount.count > 0 ? 'Restoran hesabı yeniden açıldı' : 'Açılacak kapalı hesap bulunamadı',
+      reopenedCount: reopenedCount.count,
       report: refreshedReport
     });
   } catch (error) {

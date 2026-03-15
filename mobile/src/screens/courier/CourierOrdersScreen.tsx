@@ -46,6 +46,8 @@ export default function CourierOrdersScreen() {
   const [filter, setFilter] = useState<'ALL' | 'POOL' | 'MINE' | 'COMPLETED'>('ALL');
   const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('daily');
   const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'DELIVERED' | 'CANCELLED'>('ALL');
+  const [platformFilter, setPlatformFilter] = useState<'ALL' | 'FEEDME' | 'YEMEKSEPETI'>('ALL');
   const [selectedRestaurantOrder, setSelectedRestaurantOrder] = useState<Order | null>(null);
 
   const loadOrders = useCallback(async () => {
@@ -76,13 +78,19 @@ export default function CourierOrdersScreen() {
       return true;
     });
 
-    if (!normalizedQuery) return filteredByTab;
+    const filteredByExtra = filteredByTab.filter((order) => {
+      const statusOk = statusFilter === 'ALL' || order.status === statusFilter;
+      const platformOk = platformFilter === 'ALL' || (order.sourcePlatform || '') === platformFilter;
+      return statusOk && platformOk;
+    });
 
-    return filteredByTab.filter((order) => {
-      const haystack = `${order.orderNumber} ${order.customerName} ${order.deliveryAddress}`.toLowerCase();
+    if (!normalizedQuery) return filteredByExtra;
+
+    return filteredByExtra.filter((order) => {
+      const haystack = `${order.orderNumber} ${order.customerName} ${order.deliveryAddress} ${order.sourcePlatform || ''} ${order.status}`.toLowerCase();
       return haystack.includes(normalizedQuery);
     });
-  }, [orders, filter, query, user?.id]);
+  }, [orders, filter, platformFilter, query, statusFilter, user?.id]);
 
   const handleToggleAvailability = async () => {
     try {
@@ -284,6 +292,36 @@ export default function CourierOrdersScreen() {
         placeholderTextColor="#94a3b8"
         selectionColor="#0f766e"
       />
+
+      <View style={styles.filterRow}>
+        <Pressable style={[styles.filterChip, statusFilter === 'ALL' && styles.filterChipActive]} onPress={() => setStatusFilter('ALL')}>
+          <Text style={[styles.filterText, statusFilter === 'ALL' && styles.filterTextActive]}>Durum: Tum</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, statusFilter === 'PENDING' && styles.filterChipActive]} onPress={() => setStatusFilter('PENDING')}>
+          <Text style={[styles.filterText, statusFilter === 'PENDING' && styles.filterTextActive]}>Bekliyor</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, statusFilter === 'ASSIGNED' && styles.filterChipActive]} onPress={() => setStatusFilter('ASSIGNED')}>
+          <Text style={[styles.filterText, statusFilter === 'ASSIGNED' && styles.filterTextActive]}>Atandi</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, statusFilter === 'PICKED_UP' && styles.filterChipActive]} onPress={() => setStatusFilter('PICKED_UP')}>
+          <Text style={[styles.filterText, statusFilter === 'PICKED_UP' && styles.filterTextActive]}>Yolda</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, statusFilter === 'DELIVERED' && styles.filterChipActive]} onPress={() => setStatusFilter('DELIVERED')}>
+          <Text style={[styles.filterText, statusFilter === 'DELIVERED' && styles.filterTextActive]}>Teslim</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.filterRow}>
+        <Pressable style={[styles.filterChip, platformFilter === 'ALL' && styles.filterChipActive]} onPress={() => setPlatformFilter('ALL')}>
+          <Text style={[styles.filterText, platformFilter === 'ALL' && styles.filterTextActive]}>Platform: Tum</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, platformFilter === 'FEEDME' && styles.filterChipActive]} onPress={() => setPlatformFilter('FEEDME')}>
+          <Text style={[styles.filterText, platformFilter === 'FEEDME' && styles.filterTextActive]}>Feedme</Text>
+        </Pressable>
+        <Pressable style={[styles.filterChip, platformFilter === 'YEMEKSEPETI' && styles.filterChipActive]} onPress={() => setPlatformFilter('YEMEKSEPETI')}>
+          <Text style={[styles.filterText, platformFilter === 'YEMEKSEPETI' && styles.filterTextActive]}>Yemeksepeti</Text>
+        </Pressable>
+      </View>
 
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#0f766e" />

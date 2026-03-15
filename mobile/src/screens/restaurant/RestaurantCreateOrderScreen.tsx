@@ -42,6 +42,7 @@ export default function RestaurantCreateOrderScreen() {
     confidence: number;
     quality?: 'LOW' | 'MEDIUM' | 'HIGH';
     missingFields?: string[];
+    extractionSource?: 'AI' | 'OCR';
   } | null>(null);
   const [restaurantProfile, setRestaurantProfile] = useState<{
     address: string;
@@ -109,7 +110,11 @@ export default function RestaurantCreateOrderScreen() {
       setOcrSummary({
         confidence: response.suggestions.confidence || response.data.confidence,
         quality: response.suggestions.quality || response.data.quality,
-        missingFields: response.suggestions.missingFields || response.data.missingFields
+        missingFields: response.suggestions.missingFields || response.data.missingFields,
+        extractionSource:
+          response.suggestions.extractionSource ||
+          response.extractionSource ||
+          response.data.extractionSource
       });
 
       Alert.alert('Basarili', 'Foto analiz edildi. Alanlari kontrol edip kaydedin.');
@@ -189,6 +194,7 @@ export default function RestaurantCreateOrderScreen() {
             <View style={styles.ocrInfo}>
               <Text style={styles.ocrInfoText}>Guven: %{Math.round(ocrSummary.confidence || 0)}</Text>
               <Text style={styles.ocrInfoText}>Kalite: {ocrSummary.quality || '-'}</Text>
+              <Text style={styles.ocrInfoText}>Kaynak: {ocrSummary.extractionSource === 'AI' ? 'AI API' : 'OCR Fallback'}</Text>
               {!!ocrSummary.missingFields?.length && (
                 <Text style={styles.ocrWarn}>Eksik Alanlar: {ocrSummary.missingFields.join(', ')}</Text>
               )}

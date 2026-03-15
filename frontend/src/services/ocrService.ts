@@ -15,10 +15,12 @@ export interface ExtractedOrderData {
   confidence: number;
   quality?: 'LOW' | 'MEDIUM' | 'HIGH';
   missingFields?: string[];
+  extractionSource?: 'AI' | 'OCR';
 }
 
 export interface OCRResponse {
   message: string;
+  extractionSource?: 'AI' | 'OCR';
   data: ExtractedOrderData;
   suggestions: {
     customerName: string;
@@ -34,6 +36,7 @@ export interface OCRResponse {
     confidence: number;
     quality?: 'LOW' | 'MEDIUM' | 'HIGH';
     missingFields?: string[];
+    extractionSource?: 'AI' | 'OCR';
   };
 }
 

@@ -16,6 +16,9 @@ interface RecentOrder {
   restaurant?: {
     name?: string;
   };
+  courier?: {
+    name?: string;
+  };
 }
 
 export default function AdminStatsScreen({ navigation }: any) {
@@ -142,6 +145,7 @@ export default function AdminStatsScreen({ navigation }: any) {
                 <View>
                   <Text style={styles.orderNo}>{order.orderNumber}</Text>
                   <Text style={styles.orderMeta}>{order.restaurant?.name || 'Restoran yok'}</Text>
+                  {order.courier?.name && <Text style={styles.orderMeta}>Teslim Eden Kurye: {order.courier.name}</Text>}
                   {order.sourcePlatform && <Text style={styles.orderMeta}>Platform: {order.sourcePlatform}</Text>}
                   {order.externalOrderId && <Text style={styles.orderMeta}>Platform Siparis No: {order.externalOrderId}</Text>}
                   <Text style={styles.orderMeta}>

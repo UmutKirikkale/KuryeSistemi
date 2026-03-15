@@ -82,6 +82,7 @@ export const adminService = {
         sourcePlatform?: string;
         externalOrderId?: string;
         restaurant?: { name?: string };
+        courier?: { name?: string; phone?: string };
       }>;
       pagination: any;
     };
